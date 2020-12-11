@@ -35,14 +35,14 @@ int main(int argc, char **argv)
     carsim_RoadContact_subscribe(_tunnel, CHANNEL_CONTACT, &roadcontact_handler, NULL);
     carsim_Control_subscribe(_tunnel, CHANNEL_CONTROL, &control_handler, NULL);
 
-    // HANDLE mutex_contact = CreateMutexW(NULL, TRUE, NULL);
-    // HANDLE mutex_control = CreateMutexW(NULL, TRUE, NULL);
-    // HANDLE mutex_query = CreateMutexW(NULL, TRUE, NULL);
-    // HANDLE mutex_state = CreateMutexW(NULL, TRUE, NULL);
+    HANDLE mutex_contact = CreateMutexW(NULL, TRUE, NULL);
+    HANDLE mutex_control = CreateMutexW(NULL, TRUE, NULL);
+    HANDLE mutex_query = CreateMutexW(NULL, TRUE, NULL);
+    HANDLE mutex_state = CreateMutexW(NULL, TRUE, NULL);
 
-    // HANDLE sub_thread = CreateThread(NULL, 0, sub_loop, NULL, 0, NULL);
-    // HANDLE pub_thread_query = CreateThread(NULL, 0, pub_roadquery_loop, NULL, 0, NULL);
-    // HANDLE pub_thread_state = CreateThread(NULL, 0, pub_state_loop, NULL, 0, NULL);
+    HANDLE sub_thread = CreateThread(NULL, 0, sub_loop, NULL, 0, NULL);
+    HANDLE pub_thread_query = CreateThread(NULL, 0, pub_roadquery_loop, NULL, 0, NULL);
+    HANDLE pub_thread_state = CreateThread(NULL, 0, pub_state_loop, NULL, 0, NULL);
 
     HMODULE vsDLL = NULL; // DLL with VS API
     char pathDLL[FILENAME_MAX], simfile[FILENAME_MAX] = {"simfile.sim"};
@@ -77,10 +77,6 @@ int main(int argc, char **argv)
         fgetc(stdin);
     }
     vs_free_library(vsDLL);
-
-    // CloseHandle(sub_thread);
-    // CloseHandle(pub_thread_state);
-    // CloseHandle(pub_thread_query);
 
     return 0;
 }
