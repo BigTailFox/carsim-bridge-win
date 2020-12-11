@@ -1,0 +1,1 @@
+add_library(msg "carsim_ContactPoint.c" "carsim_Control.c" "carsim_QueryPoint.c" "carsim_RoadQuery.c" "carsim_State.c" "carsim_RoadContact.c")

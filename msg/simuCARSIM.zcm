@@ -1,0 +1,55 @@
+package carsim;
+struct Control
+{
+    double throttle;
+    double brake;
+    double steer;
+}
+
+package carsim;
+struct State
+{
+    double x;
+    double y;
+    double z;
+    double yaw;
+    double roll;
+    double pitch;
+    double vx;
+    double vy;
+    double vz;
+}
+
+package carsim;
+struct QueryPoint
+{
+    int8_t id;
+    double x;
+    double y;
+}
+
+package carsim;
+struct RoadQuery
+{
+    QueryPoint left_front;
+    QueryPoint left_rear;
+    QueryPoint right_front;
+    QueryPoint right_rear;
+}
+
+package carsim;
+struct ContactPoint
+{
+    int8_t id;
+    double z;
+    double friction;
+}
+
+package carsim;
+struct RoadContact
+{
+    ContactPoint left_front;
+    ContactPoint left_rear;
+    ContactPoint right_front;
+    ContactPoint right_rear;
+}

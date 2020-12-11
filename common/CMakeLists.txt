@@ -1,0 +1,1 @@
+add_library(vs_get_api "vs_get_api.c")
