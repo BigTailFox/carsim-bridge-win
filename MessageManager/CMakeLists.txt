@@ -1,0 +1,1 @@
+add_library(msg_manager "MessageManager.cpp")
