@@ -1,6 +1,7 @@
 package carsim;
 struct Control
 {
+    int8_t valid;
     double throttle;
     double brake;
     double steer;
@@ -9,15 +10,28 @@ struct Control
 package carsim;
 struct State
 {
+    int8_t valid;
+
     double x;
     double y;
     double z;
     double yaw;
     double roll;
     double pitch;
+
     double vx;
     double vy;
     double vz;
+    double avy;
+    double avr;
+    double avp;
+
+    double dvx;
+    double dvy;
+    double dvz;
+    double davy;
+    double davr;
+    double davp;
 }
 
 package carsim;
@@ -31,6 +45,8 @@ struct QueryPoint
 package carsim;
 struct RoadQuery
 {
+    int8_t valid;
+
     QueryPoint left_front;
     QueryPoint left_rear;
     QueryPoint right_front;
@@ -48,6 +64,8 @@ struct ContactPoint
 package carsim;
 struct RoadContact
 {
+    int8_t valid;
+
     ContactPoint left_front;
     ContactPoint left_rear;
     ContactPoint right_front;

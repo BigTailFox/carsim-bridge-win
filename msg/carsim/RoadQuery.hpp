@@ -20,6 +20,8 @@ namespace carsim
 class RoadQuery
 {
     public:
+        int8_t     valid;
+
         carsim::QueryPoint left_front;
 
         carsim::QueryPoint left_rear;
@@ -124,6 +126,9 @@ int RoadQuery::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
+    tlen = __int8_t_encode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = this->left_front._encodeNoHash(buf, offset + pos, maxlen - pos);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -143,6 +148,9 @@ int RoadQuery::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
 
+    tlen = __int8_t_decode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = this->left_front._decodeNoHash(buf, offset + pos, maxlen - pos);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -161,6 +169,7 @@ int RoadQuery::_decodeNoHash(const void *buf, int offset, int maxlen)
 int RoadQuery::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
+    enc_size += __int8_t_encoded_array_size(NULL, 1);
     enc_size += this->left_front._getEncodedSizeNoHash();
     enc_size += this->left_rear._getEncodedSizeNoHash();
     enc_size += this->right_front._getEncodedSizeNoHash();
@@ -176,7 +185,7 @@ uint64_t RoadQuery::_computeHash(const __lcm_hash_ptr *p)
             return 0;
     const __lcm_hash_ptr cp = { p, RoadQuery::getHash };
 
-    uint64_t hash = 0x71776515d002b752LL +
+    uint64_t hash = 0x936cb057fc68a6e1LL +
          carsim::QueryPoint::_computeHash(&cp) +
          carsim::QueryPoint::_computeHash(&cp) +
          carsim::QueryPoint::_computeHash(&cp) +

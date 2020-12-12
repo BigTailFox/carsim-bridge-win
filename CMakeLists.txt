@@ -11,4 +11,4 @@ add_subdirectory(common)
 add_subdirectory(MessageManager)
 
 add_executable(${PROJECT_NAME} "carsim-bridge.cpp")
-target_link_libraries(${PROJECT_NAME} vs_get_api lcm)
+target_link_libraries(${PROJECT_NAME} vs_get_api lcm msg_manager)

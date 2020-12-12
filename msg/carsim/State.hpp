@@ -16,6 +16,8 @@ namespace carsim
 class State
 {
     public:
+        int8_t     valid;
+
         double     x;
 
         double     y;
@@ -33,6 +35,24 @@ class State
         double     vy;
 
         double     vz;
+
+        double     avy;
+
+        double     avr;
+
+        double     avp;
+
+        double     dvx;
+
+        double     dvy;
+
+        double     dvz;
+
+        double     davy;
+
+        double     davr;
+
+        double     davp;
 
     public:
         /**
@@ -130,6 +150,9 @@ int State::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
+    tlen = __int8_t_encode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->x, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -157,12 +180,42 @@ int State::_encodeNoHash(void *buf, int offset, int maxlen) const
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->vz, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->avy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->avr, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->avp, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->dvx, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->dvy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->dvz, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->davy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->davr, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->davp, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     return pos;
 }
 
 int State::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
+
+    tlen = __int8_t_decode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
 
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->x, 1);
     if(tlen < 0) return tlen; else pos += tlen;
@@ -191,12 +244,49 @@ int State::_decodeNoHash(const void *buf, int offset, int maxlen)
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->vz, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->avy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->avr, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->avp, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->dvx, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->dvy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->dvz, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->davy, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->davr, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->davp, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     return pos;
 }
 
 int State::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
+    enc_size += __int8_t_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
@@ -211,7 +301,7 @@ int State::_getEncodedSizeNoHash() const
 
 uint64_t State::_computeHash(const __lcm_hash_ptr *)
 {
-    uint64_t hash = 0x73ec406c616bf9abLL;
+    uint64_t hash = 0x807a2bc5f4974d75LL;
     return (hash<<1) + ((hash>>63)&1);
 }
 

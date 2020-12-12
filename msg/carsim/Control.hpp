@@ -16,6 +16,8 @@ namespace carsim
 class Control
 {
     public:
+        int8_t     valid;
+
         double     throttle;
 
         double     brake;
@@ -118,6 +120,9 @@ int Control::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
+    tlen = __int8_t_encode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->throttle, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -134,6 +139,9 @@ int Control::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
 
+    tlen = __int8_t_decode_array(buf, offset + pos, maxlen - pos, &this->valid, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->throttle, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -149,6 +157,7 @@ int Control::_decodeNoHash(const void *buf, int offset, int maxlen)
 int Control::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
+    enc_size += __int8_t_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
@@ -157,7 +166,7 @@ int Control::_getEncodedSizeNoHash() const
 
 uint64_t Control::_computeHash(const __lcm_hash_ptr *)
 {
-    uint64_t hash = 0x3ab6987277367f28LL;
+    uint64_t hash = 0x50e9c0bb76e2f04aLL;
     return (hash<<1) + ((hash>>63)&1);
 }
 

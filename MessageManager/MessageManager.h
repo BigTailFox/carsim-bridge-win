@@ -32,16 +32,16 @@ public:
     void PublishAllAsync(int freq_query, int freq_state);
     void SubscribeAll();
 
+    carsim::Control carsim_control_;
+    carsim::State carsim_state_;
+    carsim::RoadQuery road_query_;
+    carsim::RoadContact road_contact_;
+
 private:
     mutable std::mutex road_contact_mutex_;
     mutable std::mutex road_query_mutex_;
     mutable std::mutex carsim_state_mutex_;
     mutable std::mutex carsim_control_mutex_;
-
-    carsim::Control carsim_control_;
-    carsim::State carsim_state_;
-    carsim::RoadQuery road_query_;
-    carsim::RoadContact road_contact_;
 
     mutable lcm::LCM tunnel_;
     volatile bool need_stop_;
