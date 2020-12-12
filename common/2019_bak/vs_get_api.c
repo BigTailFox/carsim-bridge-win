@@ -15,9 +15,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #include "vs_deftypes.h" // VS types and definitions
 #include "vs_api.h"      // VS API definitions as prototypes
+
+#ifdef _WIN64
+#define BITNESS_SUFFIX "_64"
+#elif _WIN32
+#define BITNESS_SUFFIX "_32"
+#else
+#define BITNESS_SUFFIX ""
+#endif
 
 #if (defined(_WIN32) || defined(_WIN64))
 #define LIBRARYTYPESTR "DLL"
@@ -110,77 +119,115 @@ void vs_free_library(HMODULE dll) {
 }
 #endif
 
-void convert_path_delimiters(char* pathString) {
-  char* cursor = pathString;
-
-  while (*cursor != '\0') {
-    if (*cursor == '\\')
-      *cursor = '/';
-    cursor++;
-  }
-}
-
 // Get solver path and program directory from simfile
-int vs_get_dll_path(const char *simfile, char *pathDLL) {
-  FILE *fp; char *key, *rest, tmpstr[FILENAME_MAX], tempSimfilePath[FILENAME_MAX],
-       progDir[FILENAME_MAX], dllDir[FILENAME_MAX], vc[25];
+int vs_get_dll_path(const char* simfile, char* pathDLL)
+{
+  FILE* fp;
+  char *key, *rest, tmpstr[FILENAME_MAX], tempSimfilePath[FILENAME_MAX],
+       progDir[FILENAME_MAX], dllDir[FILENAME_MAX],
+       vehicleCode[4096], libraryName[4096], productName[128], productVersion[128];
+
+#if !defined(_WIN32) && !defined(_WIN64)
+  char *tempSimfilePathPtr = NULL;
+#endif
 
   strcpy(tempSimfilePath, simfile);
 
+  // JMM.2018.09.12. This may look a step backwards and maybe it is. The goal of vs_get_api.c is it
+  // used and copied to many projects. Some of those project make use of PathHelper.c/h. In those projects
+  // there is already defined "convert_path_delimiters" and when linking we will get a multiple definition link
+  // error. As such we don't really need a local function that is only used once.
+  // The below code snippet converts "\" to "/" when running on "not windows". 
+  // Ideally we should be using the PathHelper.h and its "convert_path_delimiters" that does exactly that. 
+  // However, under time constraints I am just removing the function from file. I am assuming it was not
+  // a coincidence that we had two function doing basically the same thing with the same name and the original
+  // author had a reason to copy the function instead of including PathHelpers.h.
 #if !defined(_WIN32) && !defined(_WIN64)
-  convert_path_delimiters(tempSimfilePath);
+  tempSimfilePathPtr = &tempSimfilePath[0];
+  while (*tempSimfilePathPtr != '\0')
+  {
+    if (*tempSimfilePathPtr == '\\')
+      *tempSimfilePathPtr = '/';
+    tempSimfilePathPtr++;
+  }
 #endif
 
-  if ((fp = fopen(tempSimfilePath, "r")) == NULL) {
-    sPrintfError( "This program needs a simfile to obtain other file names. The "
-                  "file \"%s\" either does not exist or could not be opened.\n",
-                  tempSimfilePath);
+  if ((fp = fopen(tempSimfilePath, "r")) == NULL)
+  {
+    sPrintfError("This program needs a simfile to obtain other file names. The "
+                 "file \"%s\" either does not exist or could not be opened.\n",
+                 tempSimfilePath);
     return -1;
   }
 
-  pathDLL[0] = progDir[0] = dllDir[0] = vc[0] = 0;
+  pathDLL[0] = progDir[0] = dllDir[0] = vehicleCode[0] = libraryName[0] = productName[0] = productVersion[0] = 0;
 
   // scan simfile one line at a time
-  while (fgets(tmpstr, FILENAME_MAX, fp)) {
+  while (fgets(tmpstr, FILENAME_MAX, fp))
+  {
     key = (char *)strtok(tmpstr, " \t\r\n");
     rest = (char *)strtok(NULL, "\r\n\t");
 
     if (!key) // skip empty lines
-      continue;    
+      continue;
 
     // get DLL if specified directly
 #if defined(_WIN64) || defined(_WIN32)
-    if (!strcmp(key, "DLLFILE") && rest && rest[0]) 
+    if (!strcmp(key, "DLLFILE") && rest && rest[0])
     {
-      strcpy (pathDLL, rest);
+      strcpy(pathDLL, rest);
+      break;
+    }
+#else
+    if (!strcmp(key, "SOFILE") && rest && rest[0])
+    {
+      strcpy(pathDLL, rest);
       break;
     }
 #endif
-
-    else if (!strcmp(key, "VEHICLE_CODE")) // get vehicle code
-      strcpy(vc, rest);
+    if (!strcmp(key, "VEHICLE_CODE")) // get vehicle code
+      strcpy(vehicleCode, rest);
     else if (!strcmp(key, "PROGDIR")) // get program directory
       strcpy(progDir, rest);
+    else if (!strcmp(key, "PRODUCT_ID")) // get product
+      strcpy(productName, rest);
+    else if (!strcmp(key, "PRODUCT_VER")) // get version
+      strcpy(productVersion, rest);
     else if (!strcmp(key, "END"))
       break;
   }
   fclose(fp);
 
+  if (strstr(vehicleCode, "tire") != NULL)
+    sprintf(libraryName, "%s%s", vehicleCode, BITNESS_SUFFIX);
+  else if (strcmp(productName, "CarSim") == 0)
+    sprintf(libraryName, "carsim%s", BITNESS_SUFFIX);
+  else if (strcmp(productName, "TruckSim") == 0)
+    sprintf(libraryName, "trucksim%s", BITNESS_SUFFIX);
+  else
+    sprintf(libraryName, "%s%s", vehicleCode, BITNESS_SUFFIX);
+
   // Quit if DLL was not specified and neither was vehicle code
-  if ((pathDLL[0] == 0) && (vc[0] == 0)) {
-    sPrintfError( "Unable to determine Solver type from SIMFILE.\n");
+  if ((pathDLL[0] == 0) && (libraryName[0] == 0))
+  {
+    sPrintfError("Unable to determine Solver type from SIMFILE.\n");
     return -1;
   }
 
-  // if DLLFILE was not used, get DLL from directory, vehicle type, and Windows type
-  if (pathDLL[0] == 0 && progDir[0] != 0 && vc[0] != 0)
+  // if DLLFILE was not used, resolve the standard location
+  if (pathDLL[0] == 0 && progDir[0] != 0 && libraryName[0] != 0)
   {
-#ifdef _WIN64
-    sprintf(pathDLL, "%s\\Programs\\solvers\\Default64\\%s.dll", progDir, vc);
-#elif _WIN32
-    sprintf(pathDLL, "%s\\Programs\\solvers\\Default\\%s.dll", progDir, vc);
+#if (defined(_WIN32) || defined(_WIN64))
+    sprintf(pathDLL, "%s\\Programs\\solvers\\%s.dll", progDir, libraryName);
 #else
-    sprintf(pathDLL, "lib_%s.so", vc);
+    if (productVersion[0] == 0)
+    {
+      sprintf(pathDLL, "lib%s.so.%s", libraryName, PRODUCT_VERSION);
+    }
+    else
+    {
+      sprintf(pathDLL, "lib%s.so.%s", libraryName, productVersion);
+    }
 #endif
   }
 
@@ -320,9 +367,7 @@ int vs_get_api (HMODULE dll, const char *dname) {
   if (sGetApi(&vs_set_sym_attribute, dll, "vs_set_sym_attribute", dname, me)) return -2;
   if (sGetApi(&vs_set_sym_int, dll, "vs_set_sym_int", dname, me)) return -2;
   if (sGetApi(&vs_string_copy_internal, dll, "vs_string_copy_internal", dname, me)) return -2;
-  // Slated for VS2018.0
-  // if (sGetApi(&vs_set_opt_error_dialog, dll, "vs_set_opt_error_dialog", dname, me)) return -2;
-  // if (sGetApi(&vs_set_opt_abortive_socket_close, dll, "vs_set_opt_abortive_socket_close", dname, me)) return -2;
+  if (sGetApi(&vs_set_opt_error_dialog, dll, "vs_set_opt_error_dialog", dname, me)) return -2;
 
   // working with simulation files (chapter 7)
   if (sGetApi(&vs_add_new_par_group, dll, "vs_add_new_par_group", dname, me)) return -2;
@@ -399,6 +444,7 @@ int vs_get_api (HMODULE dll, const char *dname) {
   if (sGetApi(&vs_path_dxdl_id, dll, "vs_path_dxdl_id", dname, me)) return -2;
   if (sGetApi(&vs_path_dydl_id, dll, "vs_path_dydl_id", dname, me)) return -2;
   if (sGetApi(&vs_path_curv_id, dll, "vs_path_curv_id", dname, me)) return -2;
+  if (sGetApi(&vs_path_yaw_id, dll, "vs_path_yaw_id", dname, me)) return -2;
 
   // Functions that make use of user ID for roads (chapter 7)
   if (sGetApi(&vs_road_sstart_id, dll, "vs_road_sstart_id", dname, me)) return -2;
@@ -454,10 +500,6 @@ int vs_get_api (HMODULE dll, const char *dname) {
   // undocumented
   if (sGetApi(&vs_get_lat_pos_of_edge, dll, "vs_get_lat_pos_of_edge", dname, me)) return -2;
   if (sGetApi(&vs_scale_export_vars, dll, "vs_scale_export_vars", dname, me)) return -2;
-
-  if (sGetApi(&vs_copy_table_data, dll, "vs_copy_table_data", dname, me)) return -2;
-  if (sGetApi(&vs_install_keyword_tab_group, dll, "vs_install_keyword_tab_group", dname, me)) return -2;
-  if (sGetApi(&vs_malloc_table_data, dll, "vs_malloc_table_data", dname, me)) return -2;
 
  // legacy stuff (Appendix)
   if (sGetApi(&vs_add_echo_header, dll, "vs_add_echo_header", dname, me)) return -2;
@@ -541,9 +583,7 @@ int vs_get_api_extend (HMODULE dll, const char *dname) {
   if (sGetApi(&vs_write_i_to_echo_file, dll, "vs_write_i_to_echo_file", dname, me)) return -2;
   if (sGetApi(&vs_get_sym_attribute, dll, "vs_get_sym_attribute", dname, me)) return -2;
   if (sGetApi(&vs_define_parameter_int, dll, "vs_define_parameter_int", dname, me)) return -2;
-  // Slated for VS2018.0
-  // if (sGetApi(&vs_set_opt_error_dialog, dll, "vs_set_opt_error_dialog", dname, me)) return -2;
-  // if (sGetApi(&vs_set_opt_abortive_socket_close, dll, "vs_set_opt_abortive_socket_close", dname, me)) return -2;
+  if (sGetApi(&vs_set_opt_error_dialog, dll, "vs_set_opt_error_dialog", dname, me)) return -2;
 
   return 0;
 }

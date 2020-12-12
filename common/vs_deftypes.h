@@ -1,99 +1,325 @@
-/* Define data types and macros needed for programs that will work with VS Solvers
-   using the VS API.
+/* Define data types and macros for VS solver programs. This file is needed
+   when linking to VS Solvers using the VS API.
 
-  July 2017, J. Schudel. Added explicit enum values and cautionary note
-  July 2017, M. Sayers. Removed definitions not needed by wrapper programs
+  Feb 2017, M. Sayers. Moved macros needed only for core libraries to another file.
 */
 
 #ifndef VS_DEFTYPES_H_
 #define VS_DEFTYPES_H_
 
-  #ifndef PI // avoid conflict in NI CVI
-    #define PI 3.141592653589793
-  #endif
-  #define PI_HALF 1.5707963267948966
+#include <stdio.h>
 
-  // Floating point and boolean types
-  typedef double vs_real;
-  typedef int vs_bool;
+#define TRUE 1
+#define FALSE 0
+#ifndef PI // avoid conflict in NI CVI
+#define PI 3.141592653589793
+#endif
+#define PI_HALF 1.5707963267948966
 
-  /***
-    CAUTION:
+// Floating point and boolean types
+typedef double vs_real;
+typedef int vs_bool;
 
-      Editing these enums improperly can produce unpredictable errors in behavior.
-      Addition of new entries to enumerators should be done in sequence, please
-      use the next integer in sequence regardless of position. Please note, that
-      the next integer in sequence may in fact not be located at the end of the
-      enumerator.
-  ***/
+// Types of objects that can be accessed with a keyword, including new commands
+typedef enum
+{
+  VS_KEYWORD_NULL = 100,
+  VS_KEYWORD_SYM,
+  VS_KEYWORD_ISYM,
+  VS_KEYWORD_FUNC0,
+  VS_KEYWORD_FUNC1,
+  VS_KEYWORD_CLOSURE,
+  VS_KEYWORD_OUTVAR,
+  VS_KEYWORD_WRT,
+  VS_KEYWORD_EXP,
+  VS_KEYWORD_ANI,
+  VS_KEYWORD_IMP,
+  VS_KEYWORD_TAB_1D,
+  VS_KEYWORD_TAB_2D,
+  VS_KEYWORD_TAB_GAIN,
+  VS_KEYWORD_TAB_OFFSET,
+  VS_KEYWORD_TAB_CONST,
+  VS_KEYWORD_TAB_COEF,
+  VS_KEYWORD_TAB_GROUP_1D,
+  VS_KEYWORD_TAB_GROUP_2D,
+  VS_KEYWORD_TAB_GROUP_GAIN,
+  VS_KEYWORD_TAB_GROUP_OFFSET,
+  VS_KEYWORD_TAB_GROUP_CONST,
+  VS_KEYWORD_TAB_GROUP_COEF,
+  VS_KEYWORD_CALC,
+  VS_KEYWORD_TAB_GROUP_START_XROW,
+  VS_KEYWORD_TAB_START_XROW,
+  VS_KEYWORD_TAB_GROUP_SCALE_XROW,
+  VS_KEYWORD_TAB_SCALE_XROW,
+  VS_KEYWORD_TAB_GROUP_EQ,
+  VS_KEYWORD_TAB_EQ,
+  VS_KEYWORD_TAB_GROUP_START_XCOL,
+  VS_KEYWORD_TAB_START_XCOL,
+  VS_KEYWORD_TAB_GROUP_SCALE_XCOL,
+  VS_KEYWORD_TAB_SCALE_XCOL,
+  VS_KEYWORD_TAB_GROUP_COMBINE,
+  VS_KEYWORD_TAB_COMBINE,
+  VS_KEYWORD_TAB_GROUP_ID,
+  VS_KEYWORD_TAB_ID
+} vs_keyword_type;
 
-  // Types of objects that can be accessed with a keyword, including new commands
-  typedef enum {
-    VS_KEYWORD_NULL = 100, VS_KEYWORD_SYM = 101, VS_KEYWORD_ISYM = 102,
-    VS_KEYWORD_FUNC0 = 103, VS_KEYWORD_FUNC1 = 104, VS_KEYWORD_CLOSURE = 105,
-    VS_KEYWORD_OUTVAR = 106, VS_KEYWORD_WRT = 107, VS_KEYWORD_EXP = 108,
-    VS_KEYWORD_ANI = 109, VS_KEYWORD_IMP = 110, VS_KEYWORD_TAB_1D = 111,
-    VS_KEYWORD_TAB_2D = 112,
-    VS_KEYWORD_TAB_GAIN = 113, VS_KEYWORD_TAB_OFFSET = 114, VS_KEYWORD_TAB_CONST = 115,
-    VS_KEYWORD_TAB_COEF = 116, VS_KEYWORD_TAB_GROUP_1D = 117,
-    VS_KEYWORD_TAB_GROUP_2D = 118,
-    VS_KEYWORD_TAB_GROUP_GAIN = 119, VS_KEYWORD_TAB_GROUP_OFFSET = 120,
-    VS_KEYWORD_TAB_GROUP_CONST = 121, VS_KEYWORD_TAB_GROUP_COEF = 122,
-    VS_KEYWORD_CALC = 123,
-    VS_KEYWORD_TAB_GROUP_START_XROW = 124, VS_KEYWORD_TAB_START_XROW = 125,
-    VS_KEYWORD_TAB_GROUP_SCALE_XROW = 126, VS_KEYWORD_TAB_SCALE_XROW = 127,
-    VS_KEYWORD_TAB_GROUP_EQ = 128, VS_KEYWORD_TAB_EQ = 129,
-    VS_KEYWORD_TAB_GROUP_START_XCOL = 130, VS_KEYWORD_TAB_START_XCOL = 131,
-    VS_KEYWORD_TAB_GROUP_SCALE_XCOL = 132, VS_KEYWORD_TAB_SCALE_XCOL = 133,
-    VS_KEYWORD_TAB_GROUP_COMBINE = 134, VS_KEYWORD_TAB_COMBINE = 135,
-    VS_KEYWORD_TAB_GROUP_ID = 136, VS_KEYWORD_TAB_ID = 137
-  } vs_keyword_type;
+// Locations used for calling external functions (e.g. external_echo,
+// external_calc, external_status, etc.).
+typedef enum
+{
+  VS_EXT_ECHO_TOP,
+  VS_EXT_ECHO_SYPARS,
+  VS_EXT_ECHO_PARS,
+  VS_EXT_ECHO_END,
+  VS_EXT_EQ_INIT,
+  VS_EXT_EQ_IN,
+  VS_EXT_EQ_OUT,
+  VS_EXT_EQ_END,
+  VS_EXT_EQ_PRE_INIT,
+  VS_EXT_EQ_INIT2,
+  VS_EXT_EQ_SAVE,
+  VS_EXT_EQ_FULL_STEP,
+  VS_EXT_AFTER_READ // added July 2015
+  ,
+  VS_EXT_LOC_UNSPECIFIED
+} vs_ext_loc;
 
-  // Locations used for calling external functions (e.g. external_echo,
-  // external_calc, external_status, etc.).
-  typedef enum {
-    VS_EXT_ECHO_TOP = 0, VS_EXT_ECHO_SYPARS = 1, VS_EXT_ECHO_PARS = 2,
-    VS_EXT_ECHO_END = 3, VS_EXT_EQ_INIT = 4, VS_EXT_EQ_IN = 5, VS_EXT_EQ_OUT = 6,
-    VS_EXT_EQ_END = 7, VS_EXT_EQ_PRE_INIT = 8, VS_EXT_EQ_INIT2 = 9,
-    VS_EXT_EQ_SAVE = 10, VS_EXT_EQ_FULL_STEP = 11,  VS_EXT_AFTER_READ = 12,
-    VS_EXT_LOC_UNSPECIFIED = 13, VS_EXT_EQ_DYN = 14
-  } vs_ext_loc;
+// Attributes that can be set for an internal symbolic structure (sym). Used
+// in VS API functions. The order must be consistent with sCheckIdRange
+typedef enum
+{ // start with attributes for outputs & exports
+  OUTVAR_SHORT_NAME,
+  OUTVAR_LONG_NAME,
+  OUTVAR_GEN_NAME,
+  OUTVAR_BODY_NAME,
+  OUTVAR_REAL,
+  OUTVAR_VALUE,
+  OUTVAR_UNITS,
+  OUTVAR_COMP,
+  OUTVAR_ECHO_DESC,
 
-  // Attributes that can be set for an internal symbolic structure (sym). Used
-  // in VS API functions.
-  // Any new entry added here should also be installed in sFindGenIdType()
-  typedef enum {  // start with attributes for outputs & exports
-    OUTVAR_SHORT_NAME = 0, OUTVAR_LONG_NAME = 1, OUTVAR_GEN_NAME = 2,
-    OUTVAR_BODY_NAME = 3, OUTVAR_REAL = 4, OUTVAR_VALUE = 5, OUTVAR_UNITS = 6,
-    OUTVAR_COMP = 7, OUTVAR_ECHO_DESC = 8, IMP_KEYWORD = 9, IMP_UNITS = 10,
-    IMP_DESC = 11, IMP_COMP = 12, IMP_NATIVE = 13, IMP_REAL = 14, IMP_VISIBLE = 15,
-    SV_UNITS = 16, SV_DERIVATIVE = 17, // state variable derivative
-    ISYM_KEYWORD = 18, ISYM_DIMENSIONS = 19,
-    ISYM_LIMIT_1 = 20, ISYM_LIMIT_2 = 21, ISYM_LIMIT_3 = 22, ISYM_LIMIT_4 = 23,
-    ISYM_LIMIT_5 = 24, ISYM_INDEX_1 = 25, ISYM_INDEX_2 = 26, ISYM_INDEX_3 = 27,
-    ISYM_INDEX_4 = 28, ISYM_INDEX_5 = 29,
-    SYS_PAR_KEYWORD = 30, SYS_PAR_UNITS = 31, SYS_PAR_DESC = 32, SYS_PAR_REAL = 33,
-    SYS_PAR_INTEGER = 34, SYS_PAR_VALUE = 35, SYS_PAR_INIT = 36, SYS_PAR_VISIBLE = 37,
-    PAR_KEYWORD = 38, PAR_UNITS = 39, PAR_DESC = 40, PAR_REAL = 41, PAR_INTEGER = 42,
-    PAR_VALUE = 43, PAR_INIT = 44, PAR_VISIBLE = 45,
-    ANI_SHORT_NAME = 46, ANI_REAL = 47, ANI_REAL_SCALED = 48, // for live ani
-    OUTVAR_ERD_NAME = 49, OUTVAR_ERD_UNITS = 50, OUTVAR_EXTRA_DOC = 51,
-    ANI_NAME = 52, PAR_CHECK_VALUE = 53, PAR_MIN_VALUE = 54, PAR_MAX_VALUE = 55,
-    SYS_PAR_CHECK_VALUE = 56, SYS_PAR_MIN_VALUE = 57, SYS_PAR_MAX_VALUE = 58
-  } vs_sym_attr_type;
+  // attributes for imports
+  IMP_KEYWORD,
+  IMP_UNITS,
+  IMP_DESC,
+  IMP_COMP,
+  IMP_NATIVE,
+  IMP_REAL,
+  IMP_VISIBLE,
 
-  typedef enum {
-    UNKNOWN_TYPE = -1,  /* should not occur */
-    OUTVAR_TYPE = 0,
-    IMP_TYPE = 1,
-    SV_TYPE = 2,
-    ISYM_TYPE = 3,
-    SYS_PAR_TYPE = 4,
-    PAR_TYPE = 5,
-    ANI_TYPE = 6
-  } vs_gen_sym_attr_type;
+  SV_UNITS,
+  SV_DERIVATIVE, // state variable derivative
 
-  /// Definition of an external status update callback function type.
-  typedef int (*status_func_t)(vs_ext_loc where, int statusCode, vs_real statusValue, void* userData);
+  // attributes for indexed syms, with up to 5 dimensions
+  ISYM_KEYWORD,
+  ISYM_DIMENSIONS,
+  ISYM_LIMIT_1,
+  ISYM_LIMIT_2,
+  ISYM_LIMIT_3,
+  ISYM_LIMIT_4,
+  ISYM_LIMIT_5,
+  ISYM_INDEX_1,
+  ISYM_INDEX_2,
+  ISYM_INDEX_3,
+  ISYM_INDEX_4,
+  ISYM_INDEX_5,
 
-#endif  // end block for _VS_DEFTYPES_H
+  // attributes for system parameters
+  SYS_PAR_KEYWORD,
+  SYS_PAR_UNITS,
+  SYS_PAR_DESC,
+  SYS_PAR_REAL,
+  SYS_PAR_INTEGER,
+  SYS_PAR_VALUE,
+  SYS_PAR_INIT,
+  SYS_PAR_VISIBLE,
+
+  // regular model parameters
+  PAR_KEYWORD,
+  PAR_UNITS,
+  PAR_DESC,
+  PAR_REAL,
+  PAR_INTEGER,
+  PAR_VALUE,
+  PAR_INIT,
+  PAR_VISIBLE,
+
+  ANI_SHORT_NAME,
+  ANI_REAL,
+  ANI_REAL_SCALED // variables set for live ani
+} vs_sym_attr_type;
+
+// Import options for use with IMP_VISIBLE. IMP_VS_* options do not affect
+// Simulink. If this enum is changed in any way, you MUST ensure that it
+// stays in sync with sImpKeyType (defined in vs_simlibio.c).
+typedef enum
+{
+  IMP_IGNORE,
+  IMP_REPLACE,
+  IMP_ADD,
+  IMP_MULTIPLY,
+  IMP_USER_DEFINED,
+  IMP_VS_REPLACE,
+  IMP_VS_ADD,
+  IMP_VS_MULTIPLY
+} vs_import_option;
+
+// Status of a vs_units structure.
+typedef enum
+{
+  VS_UNITS_NATIVE,
+  VS_UNITS_NEW,
+  VS_UNITS_MODIFIED
+} vs_units_status;
+
+// Structure for units, needed for some VS API functions.
+typedef struct
+{
+  char *desc, *keyword;   // desc is case-sensitive, keyword is all-caps
+  vs_real gain;           // gain: multiply to convert from internal to output
+  vs_units_status status; // status of the structure
+} vs_units;
+
+// Types of data that can be represented with vs_table. Used in table definition.
+typedef enum
+{
+  VS_TAB_CONST,
+  VS_TAB_COEF,
+  VS_TAB_EQ, // non-table options
+  VS_TAB_LIN,
+  VS_TAB_LIN_LOOP,
+  VS_TAB_LIN_FLAT, // 1D options
+  VS_TAB_STEP,
+  VS_TAB_STEP_LOOP,
+  VS_SPLINE,
+  VS_SPLINE_LOOP,
+  VS_SPLINE_FLAT,
+  VS_TAB_2D,
+  VS_TAB_2D_LOOP,
+  VS_TAB_2D_STEP,
+  VS_TAB_2D_FROM_ZERO, // 2D options
+  VS_TAB_2D_SPLINE,
+  VS_TAB_2D_VAR_WIDTH_STEP,
+  VS_TAB_2D_VAR_WIDTH
+} vs_table_type;
+
+// Combination options for replacing 2D table with 2 1D tables
+typedef enum
+{
+  VS_TAB_COMBINE_ADD,
+  VS_TAB_COMBINE_MULTIPLY, // used for 2D tables
+  VS_TAB_COMBINE_CHILD,    // indicates 1D table is child of 2D table
+  VS_TAB_COMBINE_BOTH      // used to specify that both add and multiply are supported
+} vs_tab_combine_type;
+
+typedef struct
+{
+  vs_real ****c; //Coefficients for each grid square for 2d splines
+} vs_2d_spline_coef;
+
+/* Structure for configurable table function. Value calculated using form:
+       offset + gain*constant, or
+       offset + gain*X*coefficient, or
+       offset + gain*F(X, itab, inst), or
+       offset + gain*F(Xcol, X, itab, inst), or
+       offset + gain*(F(X, itab, inst) + F2(Xcol, itab, inst)), or
+       offset + gain*(F(X, itab, inst)*F2(Xcol, itab, inst)), or
+       offset + gain*eval(expression).
+
+       where X    = (xrow_m - start_xrow)/scale_xrow
+             Xcol = (xcol_m - start_xcol)/scale_xcol
+             xrow_m, xcol_m are independent variables in the math model
+             F = main function (all options), F2 is 2nd function (1D options)
+     */
+
+// Structure for individual table.
+typedef struct vs_table
+{
+  void *tabs;                                   // parent group: must coerce. Stupid GNU!
+  int visible;                                  // should table be printed in echo file?
+  vs_table_type type;                           // used for any table or constant
+  vs_real constant, coefficient;                // constants used to replace a table
+  vs_real *x, *y;                               // arrays used for any table
+  vs_real *loop;                                // range of table, used for looping
+  vs_real gain, offset, start_xrow, scale_xrow; // used to transform almost any table
+  vs_real start_xcol, scale_xcol;               // used to transform some 2D tables
+  int nx, *jx;                                  // primary size and last entry; used for any table
+  vs_real *dydx;                                // array used only for 1D table
+  vs_real **fxy;                                // 2D array used only for 2D tables
+  int ny, *jy, extra;                           // 2nd size used only for 2D tables
+  char *table_keyword, *carpet_keyword;         // Keywords (if not "") for parsfiles
+  char *gain_keyword, *offset_keyword, *constant_keyword, *coefficient_keyword;
+  char *equation_keyword;
+  char *start_xrow_keyword, *scale_xrow_keyword; // revised July 4, 2011
+  char *start_xcol_keyword, *scale_xcol_keyword; // added July 4, 2011
+  char *user_id_keyword;                         // added May 2014
+  char *load_filename;                           // filename of ERD file used to load table
+  int vs_table_loaded;                           // was this table loaded via ERD or similar file?
+  int echo_loaded_table;                         // should this (loaded) table be echoed?
+  int *j_inverse;                                // instances for inverse tables
+  void **sub_tabs;                               // used to hold an array of sub-tables. In variable width
+                                                 // tables, used to hold a 2d table with the position of the
+                                                 // lanes (in roads, S vs L for the columns). For Independent
+                                                 // column tables, holds an array of 1D tables.
+  int nSubTabs;                                  // Number of sub-tables in sub_tabs array.
+  vs_2d_spline_coef *coef;                       // structure to hold the coefficients needed for
+                                                 // bicubic interpolation. Used only in 2D_SPLINE
+  void *equation;                                // pointer to vsExp (defined in vsp_private.h); must be coerced
+  char *eq_desc;                                 // string that was read to define the equation
+  vs_units *units_row, *units_out;               // used for all tables
+  vs_units *units_col;                           // used for column variable in 2D tables
+  struct vs_table *col_tab;                      // optional pointer to 1D table for f vs xcol
+  char *combine_keyword;                         // optional keyword to specify how 2 1D tables are combined
+  vs_tab_combine_type combine_type;              // code for combining 2 1D tables
+  int extrapolated;                              // flag: not zero if extrapolation occurred
+  int user_id;                                   // ID number of dataset defined by user (restored July 2016)
+  int set;                                       // flag: != 0 if set by vsReadTable (reading a parsfile)
+} vs_table;
+
+// Structure for table group
+typedef struct vs_tab_group
+{
+  vs_table **table;                     // array of table pointers
+  int ntab, ninst;                      // number of tables and instances per table
+  vs_table_type type_default;           // type of 2D table that is supported
+  vs_units *units_row, *units_out;      // defaults used for all tables
+  vs_units *units_col;                  // default used for column variable in 2D tables
+  char *table_keyword, *carpet_keyword; // Keywords
+  char *gain_keyword, *offset_keyword, *start_xrow_keyword, *scale_xrow_keyword;
+  char *start_xcol_keyword, *scale_xcol_keyword;
+  char *constant_keyword, *coefficient_keyword, *root_keyword, *equation_keyword;
+  char *user_id_keyword;
+  char *title;
+  char *desc_row;                           // description of the primary independent variable
+  char *desc_out;                           // description of the dependent variable from the table
+  char *desc_col;                           // description of column variable in 2D tables
+  int (*get_itab)(void);                    // function to get table id if ntab > 1
+  char *(*print_id)(int);                   // function to print table id info if ntab > 1
+  char *(*print_label)(int);                // function to print table label if ntab > 1
+  char *name_id;                            // name written in echo file for id parameters (IAXLE, etc.) if ntab > 1
+  int *id;                                  // pointer to table index (e.g., IAXLE)
+  int inverse, derivative;                  // is there inverse and derivative lookup?
+  int vs_command;                           // was this defined with the VS Command DEFINE_TABLE?
+  struct vs_tab_group *col_tabg;            // optional pointer to 1D table group for f vs xcol
+  char *combine_keyword;                    // optional keyword to specify how 2 1D tables are combined
+  vs_tab_combine_type combine_type_default; // default code for combining 2 1D tables
+} vs_tab_group;
+
+// Structure for deferred function call (no argument)
+typedef struct
+{
+  char *keyword;      // keyword should be all-caps, no spaces.
+  void (*func)(void); // pointer to function name
+} vs_func0;
+
+// Structure for deferred function call (1 argument)
+typedef struct
+{
+  char *keyword;       // keyword should be all-caps, no spaces.
+  int (*func)(char *); // pointer to function name
+} vs_func1;
+
+/// Definition of an external status update callback function type.
+typedef int (*status_func_t)(vs_ext_loc where, int statusCode, vs_real statusValue, void *userData);
+
+#endif // end block for _VS_DEFTYPES_H
