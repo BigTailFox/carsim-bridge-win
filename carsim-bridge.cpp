@@ -210,14 +210,14 @@ void external_calc(vs_real t, vs_ext_loc where)
         vs_statement("IMPORT", "IMP_MUY_R1 vs_replace", 1);
         vs_statement("IMPORT", "IMP_MUY_R2 vs_replace", 1);
 
-        // vs_statement("IMPORT", "IMP_DZDX_L1 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDX_L2 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDX_R1 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDX_R2 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDY_L1 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDY_L2 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDY_R1 vs_replace", 1);
-        // vs_statement("IMPORT", "IMP_DZDY_R2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDX_L1 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDX_L2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDX_R1 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDX_R2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDY_L1 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDY_L2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDY_R1 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_DZDY_R2 vs_replace", 1);
         break;
 
     // initialization after reading parsfile but before init
