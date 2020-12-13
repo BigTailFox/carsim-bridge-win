@@ -29,7 +29,7 @@ public:
     void PublishState() const;
     void PublishRoadQueryWithLock() const;
     void PublishStateWithLock() const;
-    void PublishAllAsync(int freq_query, int freq_state);
+    void PublishAsync(int freq_query, int freq_state);
     void SubscribeAll();
     std::chrono::steady_clock::time_point Tick();
     std::chrono::steady_clock::time_point GetTimePointSleepUntil(int freq);
@@ -51,8 +51,7 @@ private:
     std::vector<std::thread> pubers_;
     std::vector<std::thread> subers_;
     std::vector<lcm::Subscription *> lcm_subscriptions_;
-    std::chrono::steady_clock::time_point last_time_;
-    std::chrono::steady_clock clock_;
+    std::chrono::high_resolution_clock::time_point last_time_;
     bool timer_setup_;
 
     void HandlerRoadContact(

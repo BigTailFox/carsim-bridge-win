@@ -55,7 +55,7 @@ static vs_real
 int main(int argc, char **argv)
 {
     msg_manager.SubscribeAll();
-    msg_manager.PublishAllAsync(200, 200);
+    msg_manager.PublishAsync(-1, 200);
 
     HMODULE vsDLL = NULL; // DLL with VS API
     char pathDLL[FILENAME_MAX], simfile[FILENAME_MAX] = {"simfile.sim"};
@@ -247,9 +247,12 @@ void external_calc(vs_real t, vs_ext_loc where)
             printf("           : update control\n");
 #endif
 
-            *THROTTLE = msg_manager.carsim_control_.throttle;
-            *BRAKE = msg_manager.carsim_control_.brake;
-            *STEER = msg_manager.carsim_control_.steer;
+            // *THROTTLE = msg_manager.carsim_control_.throttle;
+            // *BRAKE = msg_manager.carsim_control_.brake;
+            // *STEER = msg_manager.carsim_control_.steer;
+            *THROTTLE = 1;
+            *BRAKE = 0;
+            *STEER = 10;
         }
         if (msg_manager.road_contact_.valid)
         {
@@ -271,6 +274,15 @@ void external_calc(vs_real t, vs_ext_loc where)
             *MUYR1 = msg_manager.road_contact_.right_front.friction;
             *MUXR2 = msg_manager.road_contact_.right_rear.friction;
             *MUYR2 = msg_manager.road_contact_.right_rear.friction;
+
+            *DZDXL1 = 0;
+            *DZDXL2 = 0;
+            *DZDXR1 = 0;
+            *DZDXR2 = 0;
+            *DZDYL1 = 0;
+            *DZDYL2 = 0;
+            *DZDYR1 = 0;
+            *DZDYR2 = 0;
         }
 
         break;
@@ -318,6 +330,8 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.road_query_.right_front.y = *YR1;
         msg_manager.road_query_.right_rear.x = *XR2;
         msg_manager.road_query_.right_rear.y = *YR2;
+
+        msg_manager.PublishRoadQuery();
 
 #ifdef DEBUG_PRINT
         printf("             : update road query point\n");

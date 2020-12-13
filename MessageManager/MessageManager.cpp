@@ -3,13 +3,31 @@
 using std::string;
 using std::vector;
 using namespace std::literals::chrono_literals;
+using std::chrono::duration_cast;
+using std::chrono::high_resolution_clock;
+
+// busy tick for more precision sleep
+void SpinUntil(high_resolution_clock::time_point tp)
+{
+    high_resolution_clock::time_point now;
+    do
+    {
+        now = high_resolution_clock::now();
+    } while (now < tp);
+}
 
 MessageManager::MessageManager(const string &url)
     : road_contact_(), road_query_(), carsim_control_(), carsim_state_(),
       road_contact_mutex_(), road_query_mutex_(),
       carsim_control_mutex_(), carsim_state_mutex_(),
       subers_(), pubers_(), lcm_subscriptions_(),
-      need_stop_(false), tunnel_(url){};
+      need_stop_(false), tunnel_(url)
+{
+    road_contact_.valid = 0;
+    road_query_.valid = 0;
+    carsim_control_.valid = 0;
+    carsim_state_.valid = 0;
+};
 
 MessageManager::~MessageManager()
 {
@@ -52,12 +70,18 @@ void MessageManager::PublishStateWithLock() const
     this->PublishState();
 }
 
-void MessageManager::PublishAllAsync(int freq_query, int freq_state)
+void MessageManager::PublishAsync(int freq_query, int freq_state)
 {
-    pubers_.push_back(std::thread(
-        &MessageManager::PubLoopRoadQuery, this, freq_query));
-    pubers_.push_back(std::thread(
-        &MessageManager::PubLoopCarsimState, this, freq_state));
+    if (freq_query > 0)
+    {
+        pubers_.push_back(std::thread(
+            &MessageManager::PubLoopRoadQuery, this, freq_query));
+    }
+    if (freq_state > 0)
+    {
+        pubers_.push_back(std::thread(
+            &MessageManager::PubLoopCarsimState, this, freq_state));
+    }
     for (auto &t : pubers_)
     {
         t.detach();
@@ -105,9 +129,10 @@ void MessageManager::PubLoopCarsimState(int freq)
 {
     while (!need_stop_)
     {
-        auto time_point = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 / freq);
-        this->PublishStateWithLock();
-        std::this_thread::sleep_until(time_point);
+        auto time_point = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(1000000 / freq);
+        PublishStateWithLock();
+        //std::this_thread::sleep_until(time_point);
+        SpinUntil(time_point);
     }
 }
 
@@ -115,9 +140,10 @@ void MessageManager::PubLoopRoadQuery(int freq)
 {
     while (!need_stop_)
     {
-        auto time_point = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 / freq);
-        this->PublishRoadQueryWithLock();
-        std::this_thread::sleep_until(time_point);
+        auto time_point = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(1000000 / freq);
+        PublishRoadQueryWithLock();
+        //std::this_thread::sleep_until(time_point);
+        SpinUntil(time_point);
     }
 }
 
@@ -132,7 +158,7 @@ void MessageManager::SubLoopAll()
 std::chrono::steady_clock::time_point
 MessageManager::Tick()
 {
-    last_time_ = clock_.now();
+    last_time_ = high_resolution_clock::now();
     return last_time_;
 }
 
@@ -141,20 +167,20 @@ MessageManager::GetTimePointSleepUntil(int freq)
 {
     if (timer_setup_)
     {
-        auto tp = last_time_ + std::chrono::nanoseconds(1000000000 / freq);
-        last_time_ = clock_.now();
+        auto tp = last_time_ + std::chrono::microseconds(1000000 / freq);
+        last_time_ = high_resolution_clock::now();
         return tp;
     }
     else
     {
         timer_setup_ = true;
-        last_time_ = clock_.now();
-        return clock_.now() + std::chrono::nanoseconds(10);
+        last_time_ = high_resolution_clock::now();
+        return high_resolution_clock::now() + std::chrono::microseconds(1);
     }
 }
 
 void MessageManager::Sync(int freq)
 {
     auto tp = GetTimePointSleepUntil(freq);
-    std::this_thread::sleep_until(tp);
+    SpinUntil(tp);
 }
