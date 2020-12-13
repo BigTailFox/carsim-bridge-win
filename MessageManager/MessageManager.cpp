@@ -128,3 +128,33 @@ void MessageManager::SubLoopAll()
         tunnel_.handle();
     }
 }
+
+std::chrono::steady_clock::time_point
+MessageManager::Tick()
+{
+    last_time_ = clock_.now();
+    return last_time_;
+}
+
+std::chrono::steady_clock::time_point
+MessageManager::GetTimePointSleepUntil(int freq)
+{
+    if (timer_setup_)
+    {
+        auto tp = last_time_ + std::chrono::nanoseconds(1000000000 / freq);
+        last_time_ = clock_.now();
+        return tp;
+    }
+    else
+    {
+        timer_setup_ = true;
+        last_time_ = clock_.now();
+        return clock_.now() + std::chrono::nanoseconds(10);
+    }
+}
+
+void MessageManager::Sync(int freq)
+{
+    auto tp = GetTimePointSleepUntil(freq);
+    std::this_thread::sleep_until(tp);
+}

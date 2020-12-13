@@ -31,23 +31,29 @@ public:
     void PublishStateWithLock() const;
     void PublishAllAsync(int freq_query, int freq_state);
     void SubscribeAll();
+    std::chrono::steady_clock::time_point Tick();
+    std::chrono::steady_clock::time_point GetTimePointSleepUntil(int freq);
+    void Sync(int freq);
 
     carsim::Control carsim_control_;
     carsim::State carsim_state_;
     carsim::RoadQuery road_query_;
     carsim::RoadContact road_contact_;
 
-private:
     mutable std::mutex road_contact_mutex_;
     mutable std::mutex road_query_mutex_;
     mutable std::mutex carsim_state_mutex_;
     mutable std::mutex carsim_control_mutex_;
 
+private:
     mutable lcm::LCM tunnel_;
     volatile bool need_stop_;
     std::vector<std::thread> pubers_;
     std::vector<std::thread> subers_;
     std::vector<lcm::Subscription *> lcm_subscriptions_;
+    std::chrono::steady_clock::time_point last_time_;
+    std::chrono::steady_clock clock_;
+    bool timer_setup_;
 
     void HandlerRoadContact(
         const lcm::ReceiveBuffer *rbuf,

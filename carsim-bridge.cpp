@@ -16,6 +16,7 @@
 #include "MessageManager/MessageManager.h"
 
 #define ZCM_URL "udpm://239.255.76.67:7667?ttl=1"
+#define SYNC_FREQ 1000
 #define DEBUG_PRINT
 
 /* ---------------------------------------------------------------------------------
@@ -321,6 +322,8 @@ void external_calc(vs_real t, vs_ext_loc where)
 #ifdef DEBUG_PRINT
         printf("             : update road query point\n");
 #endif
+
+        msg_manager.Sync(SYNC_FREQ);
 
         break;
 
