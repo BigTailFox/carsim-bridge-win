@@ -17,7 +17,9 @@
 
 #define ZCM_URL "udpm://239.255.76.67:7667?ttl=1"
 #define SYNC_FREQ 1000
-#define DEBUG
+#define STATE_FREQ 200
+#define ROADQUERY_FREQ 500
+//#define DEBUG
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -54,8 +56,8 @@ static vs_real
 --------------------------------------------------------------------------------- */
 int main(int argc, char **argv)
 {
-    //msg_manager.SubscribeAll();
-    //msg_manager.PublishAsync(1000, 1000);
+    msg_manager.SubscribeAll();
+    msg_manager.PublishAsync(ROADQUERY_FREQ, STATE_FREQ);
 
     HMODULE vsDLL = NULL; // DLL with VS API
     char pathDLL[FILENAME_MAX], simfile[FILENAME_MAX] = {"simfile.sim"};
@@ -245,7 +247,7 @@ void external_calc(vs_real t, vs_ext_loc where)
 #endif
         msg_manager.Tick();
 
-        //if (msg_manager.carsim_control_.valid)
+        if (msg_manager.carsim_control_.valid)
         {
             // *THROTTLE = msg_manager.carsim_control_.throttle;
             // *BRAKE = msg_manager.carsim_control_.brake;
@@ -254,7 +256,7 @@ void external_calc(vs_real t, vs_ext_loc where)
             *BRAKE = 0;
             *STEER = 0.1;
         }
-        //if (msg_manager.road_contact_.valid)
+        if (msg_manager.road_contact_.valid)
         {
             *ZL1 = msg_manager.road_contact_.left_front.z;
             *ZL2 = msg_manager.road_contact_.left_rear.z;
@@ -335,7 +337,7 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.road_query_.right_rear.x = *XR2;
         msg_manager.road_query_.right_rear.y = *YR2;
 
-        msg_manager.PublishRoadQuery();
+        //msg_manager.PublishRoadQuery();
 
 #ifdef DEBUG
         printf("lf: (%f, %f), lr: (%f, %f), rf: (%f, %f), rr: (%f, %f)\n",
@@ -347,13 +349,13 @@ void external_calc(vs_real t, vs_ext_loc where)
 #ifdef DEBUG
         printf("\n7. VS_EXT_EQ_SAVE\n");
 #endif
-        msg_manager.Sync(SYNC_FREQ);
         break;
 
     case VS_EXT_EQ_FULL_STEP: // calculate things only at the end of a full step
 #ifdef DEBUG
         printf("\n8. VS_EXT_EQ_FULL_STEP\n");
 #endif
+        msg_manager.Sync(SYNC_FREQ);
         break;
 
     case VS_EXT_EQ_END: // calculations done at end of run
