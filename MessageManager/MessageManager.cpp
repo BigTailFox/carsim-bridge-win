@@ -21,7 +21,8 @@ MessageManager::MessageManager(const string &url)
       road_contact_mutex_(), road_query_mutex_(),
       carsim_control_mutex_(), carsim_state_mutex_(),
       subers_(), pubers_(), lcm_subscriptions_(),
-      need_stop_(false), tunnel_(url)
+      need_stop_(false), tunnel_(url),
+      timer_setup_(false), tick_count_(0)
 {
     road_contact_.valid = 0;
     road_query_.valid = 0;
@@ -129,10 +130,17 @@ void MessageManager::PubLoopCarsimState(int freq)
 {
     while (!need_stop_)
     {
+#ifdef DEBUG
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
         auto time_point = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(1000000 / freq);
         PublishStateWithLock();
-        //std::this_thread::sleep_until(time_point);
         SpinUntil(time_point);
+#ifdef DEBUG
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        printf("[DEBUG] spend %d us to publish state\n", duration);
+#endif
     }
 }
 
@@ -140,10 +148,17 @@ void MessageManager::PubLoopRoadQuery(int freq)
 {
     while (!need_stop_)
     {
+#ifdef DEBUG
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
         auto time_point = std::chrono::high_resolution_clock::now() + std::chrono::microseconds(1000000 / freq);
         PublishRoadQueryWithLock();
-        //std::this_thread::sleep_until(time_point);
         SpinUntil(time_point);
+#ifdef DEBUG
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        printf("[DEBUG] spend %d us to publish roadquery\n", duration);
+#endif
     }
 }
 
@@ -158,29 +173,19 @@ void MessageManager::SubLoopAll()
 std::chrono::steady_clock::time_point
 MessageManager::Tick()
 {
-    last_time_ = high_resolution_clock::now();
-    return last_time_;
+    last_tick_ = high_resolution_clock::now();
+    return last_tick_;
 }
 
 std::chrono::steady_clock::time_point
-MessageManager::GetTimePointSleepUntil(int freq)
+MessageManager::GetSyncTimePoint(int freq)
 {
-    if (timer_setup_)
-    {
-        auto tp = last_time_ + std::chrono::microseconds(1000000 / freq);
-        last_time_ = high_resolution_clock::now();
-        return tp;
-    }
-    else
-    {
-        timer_setup_ = true;
-        last_time_ = high_resolution_clock::now();
-        return high_resolution_clock::now() + std::chrono::microseconds(1);
-    }
+    return last_tick_ + std::chrono::microseconds(1000000 / freq);
 }
 
 void MessageManager::Sync(int freq)
 {
-    auto tp = GetTimePointSleepUntil(freq);
+    auto tp = GetSyncTimePoint(freq);
+    ++tick_count_;
     SpinUntil(tp);
 }

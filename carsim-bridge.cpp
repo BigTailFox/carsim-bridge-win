@@ -17,7 +17,7 @@
 
 #define ZCM_URL "udpm://239.255.76.67:7667?ttl=1"
 #define SYNC_FREQ 1000
-#define DEBUG_PRINT
+#define DEBUG
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -54,8 +54,8 @@ static vs_real
 --------------------------------------------------------------------------------- */
 int main(int argc, char **argv)
 {
-    msg_manager.SubscribeAll();
-    msg_manager.PublishAsync(-1, 200);
+    //msg_manager.SubscribeAll();
+    //msg_manager.PublishAsync(1000, 1000);
 
     HMODULE vsDLL = NULL; // DLL with VS API
     char pathDLL[FILENAME_MAX], simfile[FILENAME_MAX] = {"simfile.sim"};
@@ -188,9 +188,8 @@ void external_calc(vs_real t, vs_ext_loc where)
 
     // just after real Parsfile has been read
     case VS_EXT_AFTER_READ:
-
-#ifdef DEBUG_PRINT
-        printf("\nVS_EXT_AFTER_READ: activate import variables\n");
+#ifdef DEBUG
+        printf("\n1. VS_EXT_AFTER_READ\n");
 #endif
 
         vs_statement("IMPORT", "IMP_STEER_SW vs_replace", 1);
@@ -223,57 +222,62 @@ void external_calc(vs_real t, vs_ext_loc where)
 
     // initialization after reading parsfile but before init
     case VS_EXT_EQ_PRE_INIT:
-        // Add code here...
+#ifdef DEBUG
+        printf("\n2. VS_EXT_PRE_INIT\n");
+#endif
         break;
 
     case VS_EXT_EQ_INIT: // initialization after built-in init
-        // Add code here...
+#ifdef DEBUG
+        printf("\n3. VS_EXT_EQ_INIT\n");
+#endif
         break;
 
     case VS_EXT_EQ_INIT2: // initialization after outputs are calculated
-        // Add code here...
+#ifdef DEBUG
+        printf("\n4. VS_EXT_EQ_INIT2\n");
+#endif
         break;
 
     case VS_EXT_EQ_IN: // calculate import variables at the start of a time step
-
-#ifdef DEBUG_PRINT
-        printf("\nVS_EXT_EQ_IN: update import variables\n");
+#ifdef DEBUG
+        printf("\n5. VS_EXT_EQ_IN\n");
 #endif
+        msg_manager.Tick();
 
-        if (msg_manager.carsim_control_.valid)
+        //if (msg_manager.carsim_control_.valid)
         {
-
-#ifdef DEBUG_PRINT
-            printf("           : update control\n");
-#endif
-
             // *THROTTLE = msg_manager.carsim_control_.throttle;
             // *BRAKE = msg_manager.carsim_control_.brake;
             // *STEER = msg_manager.carsim_control_.steer;
-            *THROTTLE = 1;
+            *THROTTLE = 0;
             *BRAKE = 0;
-            *STEER = 10;
+            *STEER = 0.1;
         }
-        if (msg_manager.road_contact_.valid)
+        //if (msg_manager.road_contact_.valid)
         {
-
-#ifdef DEBUG_PRINT
-            printf("           : update road contact point\n");
-#endif
-
             *ZL1 = msg_manager.road_contact_.left_front.z;
             *ZL2 = msg_manager.road_contact_.left_rear.z;
             *ZR1 = msg_manager.road_contact_.right_front.z;
             *ZR2 = msg_manager.road_contact_.right_rear.z;
 
-            *MUXL1 = msg_manager.road_contact_.left_front.friction;
-            *MUYL1 = msg_manager.road_contact_.left_front.friction;
-            *MUXL2 = msg_manager.road_contact_.left_rear.friction;
-            *MUYL2 = msg_manager.road_contact_.left_rear.friction;
-            *MUXR1 = msg_manager.road_contact_.right_front.friction;
-            *MUYR1 = msg_manager.road_contact_.right_front.friction;
-            *MUXR2 = msg_manager.road_contact_.right_rear.friction;
-            *MUYR2 = msg_manager.road_contact_.right_rear.friction;
+            // *MUXL1 = msg_manager.road_contact_.left_front.friction;
+            // *MUYL1 = msg_manager.road_contact_.left_front.friction;
+            // *MUXL2 = msg_manager.road_contact_.left_rear.friction;
+            // *MUYL2 = msg_manager.road_contact_.left_rear.friction;
+            // *MUXR1 = msg_manager.road_contact_.right_front.friction;
+            // *MUYR1 = msg_manager.road_contact_.right_front.friction;
+            // *MUXR2 = msg_manager.road_contact_.right_rear.friction;
+            // *MUYR2 = msg_manager.road_contact_.right_rear.friction;
+
+            *MUXL1 = 0.15;
+            *MUYL1 = 0.15;
+            *MUXL2 = 0.15;
+            *MUYL2 = 0.15;
+            *MUXR1 = 0.15;
+            *MUYR1 = 0.15;
+            *MUXR2 = 0.15;
+            *MUYR2 = 0.15;
 
             *DZDXL1 = 0;
             *DZDXL2 = 0;
@@ -284,15 +288,12 @@ void external_calc(vs_real t, vs_ext_loc where)
             *DZDYR1 = 0;
             *DZDYR2 = 0;
         }
-
         break;
 
     case VS_EXT_EQ_OUT: // calculate output variables at the end of a time step
-
-#ifdef DEBUG_PRINT
-        printf("\nVS_EXT_EQ_OUT: update output variables\n");
+#ifdef DEBUG
+        printf("\n6. VS_EXT_EQ_OUT\n");
 #endif
-
         msg_manager.carsim_state_.valid = 1;
 
         msg_manager.carsim_state_.x = *X;
@@ -316,8 +317,11 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.carsim_state_.davp = *DAVP;
         msg_manager.carsim_state_.davr = *DAVR;
 
-#ifdef DEBUG_PRINT
-        printf("             : update vehicle state\n");
+#ifdef DEBUG
+        printf("pos: (%f, %f, %f, %f, %f, %f)\nvel: (%f, %f, %f, %f, %f, %f)\nacc: (%f, %f, %f, %f, %f, %f)\n",
+               *X, *Y, *Z, *YAW, *ROLL, *PITCH,
+               *VX, *VY, *VZ, *AVY, *AVP, *AVR,
+               *DVX, *DVY, *DVZ, *DAVY, *DAVP, *DAVR);
 #endif
 
         msg_manager.road_query_.valid = 1;
@@ -333,24 +337,30 @@ void external_calc(vs_real t, vs_ext_loc where)
 
         msg_manager.PublishRoadQuery();
 
-#ifdef DEBUG_PRINT
-        printf("             : update road query point\n");
+#ifdef DEBUG
+        printf("lf: (%f, %f), lr: (%f, %f), rf: (%f, %f), rr: (%f, %f)\n",
+               *XL1, *YL1, *XL2, *YL2, *XR1, *YR1, *XR2, *YR2);
 #endif
-
-        msg_manager.Sync(SYNC_FREQ);
-
         break;
 
     case VS_EXT_EQ_SAVE: // save values for use in next time step
-                         // Add code here...
+#ifdef DEBUG
+        printf("\n7. VS_EXT_EQ_SAVE\n");
+#endif
+        msg_manager.Sync(SYNC_FREQ);
         break;
 
     case VS_EXT_EQ_FULL_STEP: // calculate things only at the end of a full step
-                              // Add code here...
+#ifdef DEBUG
+        printf("\n8. VS_EXT_EQ_FULL_STEP\n");
+#endif
         break;
 
     case VS_EXT_EQ_END: // calculations done at end of run
-        // Add code here...
+#ifdef DEBUG
+        printf("\n9. VS_EXT_EQ_END\n");
+        printf("[DEBUG] totally tick %d times\n", msg_manager.GetTickCount());
+#endif
         break;
     }
 }

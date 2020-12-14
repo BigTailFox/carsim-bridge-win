@@ -12,6 +12,8 @@
 #include "carsim/Control.hpp"
 #include "carsim/State.hpp"
 
+//#define DEBUG
+
 const static std::string CHANNEL_NAME_CARSIM_CONTROL = "CARSIM_CONTROL";
 const static std::string CHANNEL_NAME_CARSIM_STATE = "CARSIM_STATE";
 const static std::string CHANNEL_NAME_ROAD_QUERY = "CARSIM_ROADQUERY";
@@ -32,8 +34,10 @@ public:
     void PublishAsync(int freq_query, int freq_state);
     void SubscribeAll();
     std::chrono::steady_clock::time_point Tick();
-    std::chrono::steady_clock::time_point GetTimePointSleepUntil(int freq);
+    std::chrono::steady_clock::time_point GetSyncTimePoint(int freq);
     void Sync(int freq);
+    std::chrono::steady_clock::time_point GetLastTick() { return last_tick_; }
+    int GetTickCount() { return tick_count_; }
 
     carsim::Control carsim_control_;
     carsim::State carsim_state_;
@@ -51,8 +55,9 @@ private:
     std::vector<std::thread> pubers_;
     std::vector<std::thread> subers_;
     std::vector<lcm::Subscription *> lcm_subscriptions_;
-    std::chrono::high_resolution_clock::time_point last_time_;
+    std::chrono::high_resolution_clock::time_point last_tick_;
     bool timer_setup_;
+    int tick_count_;
 
     void HandlerRoadContact(
         const lcm::ReceiveBuffer *rbuf,
