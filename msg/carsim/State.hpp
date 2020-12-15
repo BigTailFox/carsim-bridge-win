@@ -54,6 +54,8 @@ class State
 
         double     davp;
 
+        double     travaled_dist;
+
     public:
         /**
          * Encode a message into binary form.
@@ -207,6 +209,9 @@ int State::_encodeNoHash(void *buf, int offset, int maxlen) const
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->davp, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
+    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->travaled_dist, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     return pos;
 }
 
@@ -271,6 +276,9 @@ int State::_decodeNoHash(const void *buf, int offset, int maxlen)
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->davp, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
+    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->travaled_dist, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     return pos;
 }
 
@@ -296,12 +304,13 @@ int State::_getEncodedSizeNoHash() const
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __double_encoded_array_size(NULL, 1);
     return enc_size;
 }
 
 uint64_t State::_computeHash(const __lcm_hash_ptr *)
 {
-    uint64_t hash = 0x807a2bc5f4974d75LL;
+    uint64_t hash = 0x613bdd49890cebe1LL;
     return (hash<<1) + ((hash>>63)&1);
 }
 

@@ -5,6 +5,10 @@
    Log:
    Apr 24, 10. M. Sayers. New function to load API: vs_get_api.
    May 18, 09. M. Sayers. New for CarSim 8.0. API install functions and vs_run.
+
+   Notice:
+   All the variables in VS_Solver math model use [SI] unit,
+   not the [User] unit from Import EXCEL. leoherz_liu@163.com
 */
 
 #include <windows.h> // Windows-specific header
@@ -19,7 +23,7 @@
 #define SYNC_FREQ 1000
 #define STATE_FREQ 200
 #define ROADQUERY_FREQ 500
-//#define DEBUG
+#define DEBUG
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -35,12 +39,14 @@ static vs_real
     //input
     *STEER,
     *THROTTLE,
-    *BRAKE,
+    *BRAKE, *BKMC,
+    *GEAR, *CLUTCH,
     *ZL1, *ZL2, *ZR1, *ZR2,
     *DZDXL1, *DZDXL2, *DZDXR1, *DZDXR2,
     *DZDYL1, *DZDYL2, *DZDYR1, *DZDYR2,
     *MUXL1, *MUXL2, *MUXR1, *MUXR2,
     *MUYL1, *MUYL2, *MUYR1, *MUYR2,
+    *RRL1, *RRL2, *RRR1, *RRR2,
     //output
     *X, *Y, *Z,
     *VX, *VY, *VZ,
@@ -57,6 +63,7 @@ static vs_real
 int main(int argc, char **argv)
 {
     msg_manager.SubscribeAll();
+    msg_manager.SubscribeAsync();
     msg_manager.PublishAsync(ROADQUERY_FREQ, STATE_FREQ);
 
     HMODULE vsDLL = NULL; // DLL with VS API
@@ -107,9 +114,12 @@ void external_setdef(void)
     TSTAMP = vs_get_var_ptr("T_STAMP");
 
     // input: control
-    STEER = vs_get_var_ptr("IMP_STEER_SW");           // steerwheel angle (deg)
+    STEER = vs_get_var_ptr("IMP_STEER_SW");           // steerwheel angl (rad)
     THROTTLE = vs_get_var_ptr("IMP_THROTTLE_ENGINE"); // open loop throttle control (-)
     BRAKE = vs_get_var_ptr("IMP_FBK_PDL");            // brake pedal force (N)
+    CLUTCH = vs_get_var_ptr("IMP_CLUTCH");            // clutch control for transmission (-)
+    GEAR = vs_get_var_ptr("IMP_GEAR_TRANS");          // transmission gear (-)
+    // BKMC = vs_get_var_ptr("IMP_PCON_BK");          // Brake master cylinder pressure
 
     // input: tire contact ground Z
     ZL1 = vs_get_var_ptr("IMP_ZGND_L1"); // Z coordinate of ground at the tire CTC (m)
@@ -127,6 +137,12 @@ void external_setdef(void)
     MUYR1 = vs_get_var_ptr("IMP_MUY_R1");
     MUYR2 = vs_get_var_ptr("IMP_MUY_R2");
 
+    // input: rolling resistance coefficient at CTC
+    RRL1 = vs_get_var_ptr("IMP_RR_SURF_L1");
+    RRL2 = vs_get_var_ptr("IMP_RR_SURF_L2");
+    RRR1 = vs_get_var_ptr("IMP_RR_SURF_R1");
+    RRR2 = vs_get_var_ptr("IMP_RR_SURF_R2");
+
     // input: tire contact slop
     DZDXL1 = vs_get_var_ptr("IMP_DZDX_L1"); // slope DZ/DX at L1 (-)
     DZDXL2 = vs_get_var_ptr("IMP_DZDX_L2");
@@ -143,30 +159,30 @@ void external_setdef(void)
     Z = vs_get_var_ptr("ZO");
     YAW = vs_get_var_ptr("YAW");
     PITCH = vs_get_var_ptr("PITCH");
-    //ROLL = vs_get_var_ptr("ROLL"); // the angle between [sy] and the horizontal plane normal to [nz], NOT EULER ANGLE (deg)
-    ROLL = vs_get_var_ptr("ROLL_E"); // euler roll angle (deg)
+    ROLL = vs_get_var_ptr("ROLL_E"); // euler roll angle (rad)
+    // ROLL = vs_get_var_ptr("ROLL"); // the angle between [sy] and the horizontal plane normal to [nz], NOT EULER ANGLE (rad)
 
     // output: velocity and angular velocity
-    VX = vs_get_var_ptr("VXNF_SM"); // the [nx] component of the velocity vector of the sprung mass CG (km/h)
-    VY = vs_get_var_ptr("VYNF_SM"); // the [ny] component of the velocity vector of the sprung mass CG (km/h)
-    VZ = vs_get_var_ptr("VZ_SM");   // the [nz] component of the velocity vector of the sprung mass CG (km/h)
-    AVP = vs_get_var_ptr("AV_P");   // the time derivative of the Euler pitch angle of the sprung mass (deg/s)
+    VX = vs_get_var_ptr("VXNF_SM"); // the [nx] component of the velocity vector of the sprung mass CG (m/s)
+    VY = vs_get_var_ptr("VYNF_SM"); // the [ny] component of the velocity vector of the sprung mass CG (m/s)
+    VZ = vs_get_var_ptr("VZ_SM");   // the [nz] component of the velocity vector of the sprung mass CG (m/s)
+    AVP = vs_get_var_ptr("AV_P");   // the time derivative of the Euler pitch angle of the sprung mass (rad/s)
     AVR = vs_get_var_ptr("AV_R");
     AVY = vs_get_var_ptr("AV_Y");
-    // VX = vs_get_var_ptr("VX");    // the speed of the instant CG of the vehicle unit in the ISO/SAE [x] direction (km/h)
-    // VY = vs_get_var_ptr("VY");    // the speed of the instant CG of the vehicle unit in the ISO/SAE [y] direction (km/h)
-    // VZ = vs_get_var_ptr("VZ");    // the speed of the instant CG of the vehicle unit in the [nz] direction (km/h)
+    // VX = vs_get_var_ptr("VX");    // the speed of the instant CG of the vehicle unit in the ISO/SAE [x] direction (m/s)
+    // VY = vs_get_var_ptr("VY");    // the speed of the instant CG of the vehicle unit in the ISO/SAE [y] direction (m/s)
+    // VZ = vs_get_var_ptr("VZ");    // the speed of the instant CG of the vehicle unit in the [nz] direction (m/s)
 
     // output: acceleration and angular acceleration
-    DVX = vs_get_var_ptr("AX_SM"); // the [x] component of the acceleration vector of the sprung mass CG (g)
+    DVX = vs_get_var_ptr("AX_SM"); // the [x] component of the acceleration vector of the sprung mass CG (m/s^2)
     DVY = vs_get_var_ptr("AX_SM");
     DVZ = vs_get_var_ptr("AZ_SM");
-    DAVP = vs_get_var_ptr("AA_P"); // the second time derivative of the Euler pitch angle of the sprung mass (rad/s2)
+    DAVP = vs_get_var_ptr("AA_P"); // the second time derivative of the Euler pitch angle of the sprung mass (rad/s^2)
     DAVR = vs_get_var_ptr("AA_R");
     DAVY = vs_get_var_ptr("AA_Y");
-    // DVX = vs_get_var_ptr("Ax"); // the acceleration of the instant CG of the vehicle unit in the ISO/SAE [x] direction (g)
+    // DVX = vs_get_var_ptr("Ax"); // the acceleration of the instant CG of the vehicle unit in the ISO/SAE [x] direction (m/s^2)
     // DVY = vs_get_var_ptr("Ay");
-    // DVZ = vs_get_var_ptr("Az"); // the acceleration of the instant CG of the vehicle unit, in the [nz] direction (g)
+    // DVZ = vs_get_var_ptr("Az"); // the acceleration of the instant CG of the vehicle unit, in the [nz] direction (m/s^2)
 
     // output: tire contact ground X,Y
     XL1 = vs_get_var_ptr("XCTC_L1");
@@ -194,32 +210,40 @@ void external_calc(vs_real t, vs_ext_loc where)
         printf("\n1. VS_EXT_AFTER_READ\n");
 #endif
 
-        vs_statement("IMPORT", "IMP_STEER_SW vs_replace", 1);
-        vs_statement("IMPORT", "IMP_THROTTLE_ENGINE vs_replace", 1);
-        vs_statement("IMPORT", "IMP_FBK_PDL vs_replace", 1);
+        vs_statement("IMPORT", "IMP_STEER_SW vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_THROTTLE_ENGINE vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_FBK_PDL vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_GEAR_TRANS vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_CLUTCH vs_replace 0.0", 1);
+        //vs_statement("IMPORT", "IMP_PCON_BK vs_replace 0.0", 1);
 
-        vs_statement("IMPORT", "IMP_ZGND_L1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_ZGND_L2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_ZGND_R1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_ZGND_R2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_ZGND_L1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_ZGND_L2 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_ZGND_R1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_ZGND_R2 vs_replace 0.0", 1);
 
-        vs_statement("IMPORT", "IMP_MUX_L1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUX_L2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUX_R1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUX_R2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUY_L1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUY_L2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUY_R1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_MUY_R2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_MUX_L1 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUX_L2 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUX_R1 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUX_R2 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUY_L1 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUY_L2 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUY_R1 vs_replace 0.9", 1);
+        vs_statement("IMPORT", "IMP_MUY_R2 vs_replace 0.9", 1);
 
-        vs_statement("IMPORT", "IMP_DZDX_L1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDX_L2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDX_R1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDX_R2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDY_L1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDY_L2 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDY_R1 vs_replace", 1);
-        vs_statement("IMPORT", "IMP_DZDY_R2 vs_replace", 1);
+        vs_statement("IMPORT", "IMP_RR_SURF_L1 vs_replace 0.015", 1);
+        vs_statement("IMPORT", "IMP_RR_SURF_L2 vs_replace 0.015", 1);
+        vs_statement("IMPORT", "IMP_RR_SURF_R1 vs_replace 0.015", 1);
+        vs_statement("IMPORT", "IMP_RR_SURF_R2 vs_replace 0.015", 1);
+
+        vs_statement("IMPORT", "IMP_DZDX_L1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDX_L2 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDX_R1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDX_R2 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDY_L1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDY_L2 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDY_R1 vs_replace 0.0", 1);
+        vs_statement("IMPORT", "IMP_DZDY_R2 vs_replace 0.0", 1);
         break;
 
     // initialization after reading parsfile but before init
@@ -249,12 +273,14 @@ void external_calc(vs_real t, vs_ext_loc where)
 
         if (msg_manager.carsim_control_.valid)
         {
-            // *THROTTLE = msg_manager.carsim_control_.throttle;
-            // *BRAKE = msg_manager.carsim_control_.brake;
-            // *STEER = msg_manager.carsim_control_.steer;
-            *THROTTLE = 0;
-            *BRAKE = 0;
-            *STEER = 0.1;
+            *THROTTLE = msg_manager.carsim_control_.throttle;
+            *BRAKE = msg_manager.carsim_control_.brake;
+            *STEER = msg_manager.carsim_control_.steer;
+            *CLUTCH = msg_manager.carsim_control_.clutch;
+            *GEAR = msg_manager.carsim_control_.gear;
+            // *THROTTLE = 0;
+            // *BRAKE = 100;
+            // *STEER = 0;
         }
         if (msg_manager.road_contact_.valid)
         {
@@ -263,32 +289,28 @@ void external_calc(vs_real t, vs_ext_loc where)
             *ZR1 = msg_manager.road_contact_.right_front.z;
             *ZR2 = msg_manager.road_contact_.right_rear.z;
 
-            // *MUXL1 = msg_manager.road_contact_.left_front.friction;
-            // *MUYL1 = msg_manager.road_contact_.left_front.friction;
-            // *MUXL2 = msg_manager.road_contact_.left_rear.friction;
-            // *MUYL2 = msg_manager.road_contact_.left_rear.friction;
-            // *MUXR1 = msg_manager.road_contact_.right_front.friction;
-            // *MUYR1 = msg_manager.road_contact_.right_front.friction;
-            // *MUXR2 = msg_manager.road_contact_.right_rear.friction;
-            // *MUYR2 = msg_manager.road_contact_.right_rear.friction;
+            *MUXL1 = msg_manager.road_contact_.left_front.friction;
+            *MUYL1 = msg_manager.road_contact_.left_front.friction;
+            *MUXL2 = msg_manager.road_contact_.left_rear.friction;
+            *MUYL2 = msg_manager.road_contact_.left_rear.friction;
+            *MUXR1 = msg_manager.road_contact_.right_front.friction;
+            *MUYR1 = msg_manager.road_contact_.right_front.friction;
+            *MUXR2 = msg_manager.road_contact_.right_rear.friction;
+            *MUYR2 = msg_manager.road_contact_.right_rear.friction;
 
-            *MUXL1 = 0.15;
-            *MUYL1 = 0.15;
-            *MUXL2 = 0.15;
-            *MUYL2 = 0.15;
-            *MUXR1 = 0.15;
-            *MUYR1 = 0.15;
-            *MUXR2 = 0.15;
-            *MUYR2 = 0.15;
+            *DZDXL1 = msg_manager.road_contact_.left_front.slope_x;
+            *DZDXL2 = msg_manager.road_contact_.left_rear.slope_x;
+            *DZDXR1 = msg_manager.road_contact_.right_front.slope_x;
+            *DZDXR2 = msg_manager.road_contact_.right_rear.slope_x;
+            *DZDYL1 = msg_manager.road_contact_.left_front.slope_y;
+            *DZDYL2 = msg_manager.road_contact_.left_rear.slope_y;
+            *DZDYR1 = msg_manager.road_contact_.right_front.slope_y;
+            *DZDYR2 = msg_manager.road_contact_.right_rear.slope_y;
 
-            *DZDXL1 = 0;
-            *DZDXL2 = 0;
-            *DZDXR1 = 0;
-            *DZDXR2 = 0;
-            *DZDYL1 = 0;
-            *DZDYL2 = 0;
-            *DZDYR1 = 0;
-            *DZDYR2 = 0;
+            *RRL1 = msg_manager.road_contact_.left_front.rrc;
+            *RRL2 = msg_manager.road_contact_.left_rear.rrc;
+            *RRR1 = msg_manager.road_contact_.right_front.rrc;
+            *RRR2 = msg_manager.road_contact_.right_rear.rrc;
         }
         break;
 

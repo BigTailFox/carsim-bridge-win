@@ -5,6 +5,8 @@ struct Control
     double throttle;
     double brake;
     double steer;
+    double gear;
+    double clutch;
 }
 
 package carsim;
@@ -32,6 +34,8 @@ struct State
     double davy;
     double davr;
     double davp;
+
+    double travaled_dist;
 }
 
 package carsim;
@@ -59,6 +63,9 @@ struct ContactPoint
     int8_t id;
     double z;
     double friction;
+    double rrc;
+    double slope_x;
+    double slope_y;
 }
 
 package carsim;
