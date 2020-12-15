@@ -32,7 +32,14 @@ public:
     void PublishRoadQueryWithLock() const;
     void PublishStateWithLock() const;
     void PublishAsync(int freq_query, int freq_state);
+
+    void SubscribeRoadContact();
+    void SubscribeControl();
     void SubscribeAll();
+    void SubscribeAsync();
+    void Handle() { tunnel_.handle(); }
+    void UnsubscribeAll();
+
     std::chrono::steady_clock::time_point Tick();
     std::chrono::steady_clock::time_point GetSyncTimePoint(int freq);
     void Sync(int freq);

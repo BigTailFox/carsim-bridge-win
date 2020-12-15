@@ -89,19 +89,38 @@ void MessageManager::PublishAsync(int freq_query, int freq_state)
     }
 }
 
-void MessageManager::SubscribeAll()
+void MessageManager::SubscribeRoadContact()
 {
-    auto lcm_sub1 = tunnel_.subscribe(
-        CHANNEL_NAME_CARSIM_CONTROL,
-        &MessageManager::HandlerCarsimControl,
-        this);
-    auto lcm_sub2 = tunnel_.subscribe(
+    auto lcm_sub = tunnel_.subscribe(
         CHANNEL_NAME_ROAD_CONTACT,
         &MessageManager::HandlerRoadContact,
         this);
-    lcm_subscriptions_.push_back(lcm_sub1);
-    lcm_subscriptions_.push_back(lcm_sub2);
+    lcm_subscriptions_.push_back(lcm_sub);
+}
 
+void MessageManager::SubscribeControl()
+{
+    auto lcm_sub = tunnel_.subscribe(
+        CHANNEL_NAME_CARSIM_CONTROL,
+        &MessageManager::HandlerCarsimControl,
+        this);
+    lcm_subscriptions_.push_back(lcm_sub);
+}
+
+void MessageManager::SubscribeAll()
+{
+    SubscribeRoadContact();
+    SubscribeControl();
+}
+
+void MessageManager::UnsubscribeAll()
+{
+    for (auto sub : lcm_subscriptions_)
+        tunnel_.unsubscribe(sub);
+}
+
+void MessageManager::SubscribeAsync()
+{
     subers_.push_back(std::thread(
         &MessageManager::SubLoopAll, this));
     for (auto &t : subers_)
