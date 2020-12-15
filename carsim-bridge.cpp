@@ -23,7 +23,7 @@
 #define SYNC_FREQ 1000
 #define STATE_FREQ 200
 #define ROADQUERY_FREQ 500
-#define DEBUG
+//#define DEBUG
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -87,8 +87,15 @@ int main(int argc, char **argv)
     vs_install_scan_function(external_scan);
 
     // Make the run; vs_run returns 0 if OK
+    auto start = std::chrono::steady_clock::now();
     if (vs_run(simfile))
         MessageBox(NULL, vs_get_error_message(), NULL, MB_ICONERROR);
+    auto end = std::chrono::steady_clock::now();
+    auto duration = end - start;
+    while (true)
+    {
+        printf("spend %d ms\n", duration.count() / 1000000);
+    }
 
     // Wait for a keypress if the parameter opt_pause was specified.
     if (vs_opt_pause())
@@ -269,6 +276,7 @@ void external_calc(vs_real t, vs_ext_loc where)
 #ifdef DEBUG
         printf("\n5. VS_EXT_EQ_IN\n");
 #endif
+        msg_manager.Sync(SYNC_FREQ);
         msg_manager.Tick();
 
         if (msg_manager.carsim_control_.valid)
@@ -377,7 +385,6 @@ void external_calc(vs_real t, vs_ext_loc where)
 #ifdef DEBUG
         printf("\n8. VS_EXT_EQ_FULL_STEP\n");
 #endif
-        msg_manager.Sync(SYNC_FREQ);
         break;
 
     case VS_EXT_EQ_END: // calculations done at end of run
