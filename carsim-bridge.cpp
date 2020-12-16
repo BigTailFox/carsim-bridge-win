@@ -19,11 +19,14 @@
 
 #include "MessageManager/MessageManager.h"
 
-#define ZCM_URL "udpm://239.255.76.67:7667?ttl=1"
-#define SYNC_FREQ 1000
-#define STATE_FREQ 200
-#define ROADQUERY_FREQ 500
-//#define DEBUG
+//#define DEBUG                                     // whether to print debug information to terminal
+#define ZCM_URL "udpm://239.255.76.67:7667?ttl=1" // url of zcm
+#define SYNC_FREQ 1000                            // should be keep the same as the carsim sovler calculation freq
+#define STATE_FREQ 200                            // freq to publish carsim state to vtd/rdb
+#define ROADQUERY_FREQ 500                        // freq to publish carsim road contact query to vtd/odrgateway
+#define USE_TRANS                                 // whether to use transmission control
+#define USE_RRC                                   // whether to use road surface rolling resistance coefficient as an import variable
+//#define USE_CLUTCH                                // whether to use clutch control
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -39,8 +42,8 @@ static vs_real
     //input
     *STEER,
     *THROTTLE,
-    *BRAKE, *BKMC,
-    *GEAR, *CLUTCH,
+    *BRAKE, //*BKMC,
+    *TRANS, *GEAR, *CLUTCH,
     *ZL1, *ZL2, *ZR1, *ZR2,
     *DZDXL1, *DZDXL2, *DZDXR1, *DZDXR2,
     *DZDYL1, *DZDYL2, *DZDYR1, *DZDYR2,
@@ -124,8 +127,13 @@ void external_setdef(void)
     STEER = vs_get_var_ptr("IMP_STEER_SW");           // steerwheel angl (rad)
     THROTTLE = vs_get_var_ptr("IMP_THROTTLE_ENGINE"); // open loop throttle control (-)
     BRAKE = vs_get_var_ptr("IMP_FBK_PDL");            // brake pedal force (N)
-    CLUTCH = vs_get_var_ptr("IMP_CLUTCH");            // clutch control for transmission (-)
-    GEAR = vs_get_var_ptr("IMP_GEAR_TRANS");          // transmission gear (-)
+#ifdef USE_CLUTCH
+    CLUTCH = vs_get_var_ptr("IMP_CLUTCH"); // clutch control for transmission (-)
+#endif
+#ifdef USE_TRANS
+    TRANS = vs_get_var_ptr("IMP_MODE_TRANS"); // Transmission controller mode : -1->reverse, 0->neutral, 1->open - loop
+#endif
+    // GEAR = vs_get_var_ptr("IMP_GEAR_TRANS");  // transmission gear (-)
     // BKMC = vs_get_var_ptr("IMP_PCON_BK");          // Brake master cylinder pressure
 
     // input: tire contact ground Z
@@ -144,11 +152,13 @@ void external_setdef(void)
     MUYR1 = vs_get_var_ptr("IMP_MUY_R1");
     MUYR2 = vs_get_var_ptr("IMP_MUY_R2");
 
+#ifdef USE_RRC
     // input: rolling resistance coefficient at CTC
     RRL1 = vs_get_var_ptr("IMP_RR_SURF_L1");
     RRL2 = vs_get_var_ptr("IMP_RR_SURF_L2");
     RRR1 = vs_get_var_ptr("IMP_RR_SURF_R1");
     RRR2 = vs_get_var_ptr("IMP_RR_SURF_R2");
+#endif
 
     // input: tire contact slop
     DZDXL1 = vs_get_var_ptr("IMP_DZDX_L1"); // slope DZ/DX at L1 (-)
@@ -220,8 +230,12 @@ void external_calc(vs_real t, vs_ext_loc where)
         vs_statement("IMPORT", "IMP_STEER_SW vs_replace 0.0", 1);
         vs_statement("IMPORT", "IMP_THROTTLE_ENGINE vs_replace 0.0", 1);
         vs_statement("IMPORT", "IMP_FBK_PDL vs_replace 0.0", 1);
-        vs_statement("IMPORT", "IMP_GEAR_TRANS vs_replace 0.0", 1);
+#ifdef USE_TRANS
+        vs_statement("IMPORT", "IMP_MODE_TRANS vs_replace 0", 1);
+#endif
+#ifdef USE_CLUTCH
         vs_statement("IMPORT", "IMP_CLUTCH vs_replace 0.0", 1);
+#endif
         //vs_statement("IMPORT", "IMP_PCON_BK vs_replace 0.0", 1);
 
         vs_statement("IMPORT", "IMP_ZGND_L1 vs_replace 0.0", 1);
@@ -238,10 +252,12 @@ void external_calc(vs_real t, vs_ext_loc where)
         vs_statement("IMPORT", "IMP_MUY_R1 vs_replace 0.9", 1);
         vs_statement("IMPORT", "IMP_MUY_R2 vs_replace 0.9", 1);
 
+#ifdef USE_RRC
         vs_statement("IMPORT", "IMP_RR_SURF_L1 vs_replace 0.015", 1);
         vs_statement("IMPORT", "IMP_RR_SURF_L2 vs_replace 0.015", 1);
         vs_statement("IMPORT", "IMP_RR_SURF_R1 vs_replace 0.015", 1);
         vs_statement("IMPORT", "IMP_RR_SURF_R2 vs_replace 0.015", 1);
+#endif
 
         vs_statement("IMPORT", "IMP_DZDX_L1 vs_replace 0.0", 1);
         vs_statement("IMPORT", "IMP_DZDX_L2 vs_replace 0.0", 1);
@@ -279,16 +295,22 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.Sync(SYNC_FREQ);
         msg_manager.Tick();
 
+        *THROTTLE = 1;
+        *TRANS = 3;
+
         if (msg_manager.carsim_control_.valid)
         {
             *THROTTLE = msg_manager.carsim_control_.throttle;
             *BRAKE = msg_manager.carsim_control_.brake;
             *STEER = msg_manager.carsim_control_.steer;
+#ifdef USE_CLUTCH
             *CLUTCH = msg_manager.carsim_control_.clutch;
-            *GEAR = msg_manager.carsim_control_.gear;
-            // *THROTTLE = 0;
-            // *BRAKE = 100;
-            // *STEER = 0;
+#endif
+            //*TRANS = msg_manager.carsim_control_.gear;
+#ifdef DEBUG
+            printf("throttle: %f, brake_force: %f, steer: %f, clutch: %f, trans_mode: %f\n",
+                   *THROTTLE, *BRAKE, *STEER, *CLUTCH, *TRANS);
+#endif
         }
         if (msg_manager.road_contact_.valid)
         {
@@ -319,6 +341,16 @@ void external_calc(vs_real t, vs_ext_loc where)
             *RRL2 = msg_manager.road_contact_.left_rear.rrc;
             *RRR1 = msg_manager.road_contact_.right_front.rrc;
             *RRR2 = msg_manager.road_contact_.right_rear.rrc;
+#ifdef DEBUG
+            printf("contact point z:\nlf %f, lr %f, rf %f, rr %f\n",
+                   *ZL1, *ZL2, *ZR1, *ZR2);
+            printf("contact point friction:\nlf (%f, %f), lr (%f, %f), rf (%f, %f), rr (%f, %f)\n",
+                   *MUXL1, *MUYL1, *MUXL2, *MUYL2, *MUXR1, *MUYR1, *MUXR2, *MUYR2);
+            printf("contact point rolling resistance coeffient:\nlf %f, lr %f, rf %f, rr %f\n",
+                   *RRL1, *RRL2, *RRR1, *RRR2);
+            printf("contact point slope:\nlf (%f, %f), lr (%f, %f), rf (%f, %f), rr (%f, %f)\n",
+                   *DZDXL1, *DZDYL1, *DZDXL2, *DZDYL2, *DZDXR1, *DZDYR1, *DZDXR2, *DZDYR2);
+#endif
         }
         break;
 
