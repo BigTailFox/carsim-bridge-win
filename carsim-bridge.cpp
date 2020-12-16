@@ -7,8 +7,12 @@
    May 18, 09. M. Sayers. New for CarSim 8.0. API install functions and vs_run.
 
    Notice:
-   All the variables in VS_Solver math model use [SI] unit,
+   [2020.12.15] All the variables in VS_Solver math model use [SI] unit,
    not the [User] unit from Import EXCEL. leoherz_liu@163.com
+   [2020.12.16] Clutch control would be ignored by VS_Solver if no clutch transmission being used
+   [2020.12.16] Transmission control -1 means reverse, 0 means neutral, 1 means open-loop gear control,
+   2 ~ max.gear. means closed-loop gear control by carsim (auto-gear box), max.gear. < gear.max.limit.
+   e.g. the car have a 7 speed transmission, you can choose 2 ~ 7 here
 */
 
 #include <windows.h> // Windows-specific header
@@ -300,9 +304,6 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.Sync(SYNC_FREQ);
         msg_manager.Tick();
 
-        *THROTTLE = 1;
-        *TRANS = 3;
-
         if (msg_manager.carsim_control_.valid)
         {
             *THROTTLE = msg_manager.carsim_control_.throttle;
@@ -311,7 +312,9 @@ void external_calc(vs_real t, vs_ext_loc where)
 #ifdef USE_CLUTCH
             *CLUTCH = msg_manager.carsim_control_.clutch;
 #endif
-            //*TRANS = msg_manager.carsim_control_.gear;
+#ifdef USE_TRANS
+            *TRANS = msg_manager.carsim_control_.gear;
+#endif
 #ifdef DEBUG
             printf("throttle: %f, brake_force: %f, steer: %f, clutch: %f, trans_mode: %f\n",
                    *THROTTLE, *BRAKE, *STEER, *CLUTCH, *TRANS);
