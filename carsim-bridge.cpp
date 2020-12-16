@@ -19,14 +19,15 @@
 
 #include "MessageManager/MessageManager.h"
 
-//#define DEBUG                                     // whether to print debug information to terminal
+//#define DEBUG                                   // whether to print debug information to terminal
+//#define TIMING                                  // whether to timing this run
 #define ZCM_URL "udpm://239.255.76.67:7667?ttl=1" // url of zcm
-#define SYNC_FREQ 1000                            // should be keep the same as the carsim sovler calculation freq
-#define STATE_FREQ 200                            // freq to publish carsim state to vtd/rdb
-#define ROADQUERY_FREQ 500                        // freq to publish carsim road contact query to vtd/odrgateway
+#define SYNC_FREQ 1002                            // should be keep the same as the carsim sovler calculation freq
+#define STATE_FREQ 204                            // freq to publish carsim state to vtd/rdb
+#define ROADQUERY_FREQ 510                        // freq to publish carsim road contact query to vtd/odrgateway
 #define USE_TRANS                                 // whether to use transmission control
 #define USE_RRC                                   // whether to use road surface rolling resistance coefficient as an import variable
-//#define USE_CLUTCH                                // whether to use clutch control
+//#define USE_CLUTCH                              // whether to use clutch control
 
 /* ---------------------------------------------------------------------------------
    Function Prototypes, Variables
@@ -90,15 +91,19 @@ int main(int argc, char **argv)
     vs_install_scan_function(external_scan);
 
     // Make the run; vs_run returns 0 if OK
+#ifdef TIMING
     auto start = std::chrono::steady_clock::now();
+#endif
     if (vs_run(simfile))
         MessageBox(NULL, vs_get_error_message(), NULL, MB_ICONERROR);
+#ifdef TIMING
     auto end = std::chrono::steady_clock::now();
     auto duration = end - start;
     while (true)
     {
-        printf("spend %d ms\n", duration.count() / 1000000);
+        printf("spend %lld ms\n", duration.count() / 1000000);
     }
+#endif
 
     // Wait for a keypress if the parameter opt_pause was specified.
     if (vs_opt_pause())
@@ -337,10 +342,12 @@ void external_calc(vs_real t, vs_ext_loc where)
             *DZDYR1 = msg_manager.road_contact_.right_front.slope_y;
             *DZDYR2 = msg_manager.road_contact_.right_rear.slope_y;
 
+#ifdef USE_RRC
             *RRL1 = msg_manager.road_contact_.left_front.rrc;
             *RRL2 = msg_manager.road_contact_.left_rear.rrc;
             *RRR1 = msg_manager.road_contact_.right_front.rrc;
             *RRR2 = msg_manager.road_contact_.right_rear.rrc;
+#endif
 #ifdef DEBUG
             printf("contact point z:\nlf %f, lr %f, rf %f, rr %f\n",
                    *ZL1, *ZL2, *ZR1, *ZR2);
@@ -398,8 +405,6 @@ void external_calc(vs_real t, vs_ext_loc where)
         msg_manager.road_query_.right_front.y = *YR1;
         msg_manager.road_query_.right_rear.x = *XR2;
         msg_manager.road_query_.right_rear.y = *YR2;
-
-        //msg_manager.PublishRoadQuery();
 
 #ifdef DEBUG
         printf("lf: (%f, %f), lr: (%f, %f), rf: (%f, %f), rr: (%f, %f)\n",
