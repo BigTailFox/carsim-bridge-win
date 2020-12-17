@@ -25,10 +25,10 @@
 
 //#define DEBUG                                   // whether to print debug information to terminal
 //#define TIMING                                  // whether to timing this run
-#define ZCM_URL "udpm://239.255.76.67:7667?ttl=1" // url of zcm
-#define SYNC_FREQ 1002                            // should be keep the same as the carsim sovler calculation freq
-#define STATE_FREQ 204                            // freq to publish carsim state to vtd/rdb
-#define ROADQUERY_FREQ 510                        // freq to publish carsim road contact query to vtd/odrgateway
+#define ZCM_URL "udpm://239.255.76.67:7668?ttl=1" // url of zcm
+#define SYNC_FREQ 1000                            // should be keep the same as the carsim sovler calculation freq
+#define STATE_FREQ 200                            // freq to publish carsim state to vtd/rdb
+#define ROADQUERY_FREQ 500                        // freq to publish carsim road contact query to vtd/odrgateway
 #define USE_TRANS                                 // whether to use transmission control
 #define USE_RRC                                   // whether to use road surface rolling resistance coefficient as an import variable
 //#define USE_CLUTCH                              // whether to use clutch control
@@ -71,6 +71,7 @@ static vs_real
 int main(int argc, char **argv)
 {
     msg_manager.SubscribeAll();
+    //msg_manager.SubscribeControl();
     msg_manager.SubscribeAsync();
     msg_manager.PublishAsync(ROADQUERY_FREQ, STATE_FREQ);
 
@@ -316,8 +317,8 @@ void external_calc(vs_real t, vs_ext_loc where)
             *TRANS = msg_manager.carsim_control_.gear;
 #endif
 #ifdef DEBUG
-            printf("throttle: %f, brake_force: %f, steer: %f, clutch: %f, trans_mode: %f\n",
-                   *THROTTLE, *BRAKE, *STEER, *CLUTCH, *TRANS);
+            printf("throttle: %f, brake_force: %f, steer: %f, trans_mode: %f\n",
+                   *THROTTLE, *BRAKE, *STEER, *TRANS);
 #endif
         }
         if (msg_manager.road_contact_.valid)

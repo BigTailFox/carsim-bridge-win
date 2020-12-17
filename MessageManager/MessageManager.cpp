@@ -91,20 +91,20 @@ void MessageManager::PublishAsync(int freq_query, int freq_state)
 
 void MessageManager::SubscribeRoadContact()
 {
-    auto lcm_sub = tunnel_.subscribe(
+    auto lcm_sub1 = tunnel_.subscribe(
         CHANNEL_NAME_ROAD_CONTACT,
         &MessageManager::HandlerRoadContact,
         this);
-    lcm_subscriptions_.push_back(lcm_sub);
+    lcm_subscriptions_.push_back(lcm_sub1);
 }
 
 void MessageManager::SubscribeControl()
 {
-    auto lcm_sub = tunnel_.subscribe(
+    auto lcm_sub2 = tunnel_.subscribe(
         CHANNEL_NAME_CARSIM_CONTROL,
         &MessageManager::HandlerCarsimControl,
         this);
-    lcm_subscriptions_.push_back(lcm_sub);
+    lcm_subscriptions_.push_back(lcm_sub2);
 }
 
 void MessageManager::SubscribeAll()
@@ -134,7 +134,8 @@ void MessageManager::HandlerRoadContact(
     const std::string &channel,
     const carsim::RoadContact *msg)
 {
-    this->road_contact_ = *msg;
+    road_contact_ = *msg;
+    // printf("[DEBUG] recv ROAD CONTACT\n");
 }
 
 void MessageManager::HandlerCarsimControl(
@@ -142,7 +143,24 @@ void MessageManager::HandlerCarsimControl(
     const std::string &channel,
     const carsim::Control *msg)
 {
+    // auto start = std::chrono::high_resolution_clock::now();
+
     this->carsim_control_ = *msg;
+    // carsim_control_.valid = msg->valid;
+    // carsim_control_.throttle = msg->throttle;
+    // carsim_control_.brake = msg->brake;
+    // carsim_control_.gear = msg->gear;
+    // carsim_control_.clutch = msg->clutch;
+    // carsim_control_.steer = msg->steer;
+
+    // printf("[DEBUG] recv CARSIM CONTROL\n");
+    // printf("carsimcontrol: throttle %f, brake %f, steer %f, gear %f, valid %d\n",
+    //        carsim_control_.throttle, carsim_control_.brake,
+    //        carsim_control_.steer, carsim_control_.gear, carsim_control_.valid);
+
+    // auto end = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    // printf("[DEBUG] spend %d us to handle carsim control\n", duration);
 }
 
 void MessageManager::PubLoopCarsimState(int freq)
